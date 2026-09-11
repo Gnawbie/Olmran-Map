@@ -335,11 +335,15 @@ const RoomGraphView = (function () {
       const frame = stack[stack.length - 1];
       renderCrumbs();
       const world = renderNode(svg, frame.node);
+      // Clicking a connector room always opens its Mini-Area in its own
+      // floating window (see openMiniAreaWindow below) rather than
+      // navigating this canvas in place -- this matches Test Builder's own
+      // multi-window behavior and lets a user keep several Mini-Areas open
+      // side by side. `stack` is kept around only so `.show()` can still
+      // swap this canvas's single node from outside (moderator's Area
+      // picker, or opening a fresh window).
       interaction = attachInteraction(svg, world, frame.node, maId => {
-        const entry = index.miniAreasById.get(maId);
-        if (!entry) return;
-        stack.push({ node: entry.ma, title: entry.ma.name });
-        draw();
+        openMiniAreaWindow(index, maId);
       });
     }
 
@@ -356,5 +360,128 @@ const RoomGraphView = (function () {
     };
   }
 
-  return { buildIndex, createExplorer, renderNode };
+  // ---- floating Mini-Area windows ----
+  // Draggable/resizable/maximizable/minimizable windows, stacked in one
+  // fixed overlay layer appended to <body>. Each window is a self-contained
+  // createExplorer() instance, so clicking a connector room inside an open
+  // window opens yet another window on top -- nesting works the same way
+  // Test Builder's own floating windows do.
+  let windowZCounter = 3000;
+  let windowCascade = 0;
+
+  function ensureWindowsLayer() {
+    let layer = document.querySelector(".rgv-windows-layer");
+    if (!layer) {
+      layer = document.createElement("div");
+      layer.className = "rgv-windows-layer";
+      document.body.appendChild(layer);
+    }
+    return layer;
+  }
+
+  function bringToFront(win) {
+    windowZCounter += 1;
+    win.style.zIndex = windowZCounter;
+  }
+
+  function openWindow(index, node, title) {
+    const layer = ensureWindowsLayer();
+    const win = document.createElement("div");
+    win.className = "rgv-window";
+    windowCascade = (windowCascade + 28) % 220;
+    win.style.left = (60 + windowCascade) + "px";
+    win.style.top = (60 + windowCascade) + "px";
+    win.style.width = "640px";
+    win.style.height = "460px";
+    win.innerHTML =
+      '<div class="rgv-window-titlebar">' +
+        '<span class="rgv-window-title"></span>' +
+        '<div class="rgv-window-controls">' +
+          '<button class="rgv-win-btn rgv-win-min" type="button" title="Minimize">–</button>' +
+          '<button class="rgv-win-btn rgv-win-max" type="button" title="Maximize">▢</button>' +
+          '<button class="rgv-win-btn rgv-win-close" type="button" title="Close">✕</button>' +
+        "</div>" +
+      "</div>" +
+      '<div class="rgv-window-body"></div>';
+    win.querySelector(".rgv-window-title").textContent = title;
+    layer.appendChild(win);
+    bringToFront(win);
+    win.addEventListener("pointerdown", () => bringToFront(win));
+
+    const explorer = createExplorer(win.querySelector(".rgv-window-body"), index);
+    explorer.show(node, title);
+
+    // -- drag to move (titlebar only, disabled while maximized) --
+    const titlebar = win.querySelector(".rgv-window-titlebar");
+    let dragging = false, dragStart = null, winStart = null;
+    titlebar.addEventListener("pointerdown", e => {
+      if (e.target.closest(".rgv-win-btn") || win.classList.contains("rgv-window-maximized")) return;
+      dragging = true;
+      dragStart = { x: e.clientX, y: e.clientY };
+      winStart = { left: win.offsetLeft, top: win.offsetTop };
+      titlebar.setPointerCapture(e.pointerId);
+    });
+    titlebar.addEventListener("pointermove", e => {
+      if (!dragging) return;
+      win.style.left = Math.max(0, winStart.left + (e.clientX - dragStart.x)) + "px";
+      win.style.top = Math.max(0, winStart.top + (e.clientY - dragStart.y)) + "px";
+    });
+    titlebar.addEventListener("pointerup", () => { dragging = false; });
+
+    // -- free drag resize is native CSS `resize: both` on .rgv-window; we
+    // just need to re-fit the canvas whenever the window's box changes --
+    const resizeObserver = new ResizeObserver(() => { if (explorer.resize) explorer.resize(); });
+    resizeObserver.observe(win);
+
+    // -- close --
+    win.querySelector(".rgv-win-close").addEventListener("click", () => {
+      resizeObserver.disconnect();
+      if (win.parentNode) win.parentNode.removeChild(win);
+    });
+
+    // -- minimize: collapse to just the titlebar, remembering prior height --
+    let prevHeight = win.style.height;
+    win.querySelector(".rgv-win-min").addEventListener("click", () => {
+      const minimized = win.classList.toggle("rgv-window-minimized");
+      if (minimized) {
+        prevHeight = win.style.height;
+        win.style.height = "";
+      } else {
+        win.style.height = prevHeight || "460px";
+      }
+      if (explorer.resize) explorer.resize();
+    });
+
+    // -- maximize / restore --
+    let restoreBounds = null;
+    win.querySelector(".rgv-win-max").addEventListener("click", () => {
+      if (win.classList.contains("rgv-window-maximized")) {
+        win.classList.remove("rgv-window-maximized");
+        if (restoreBounds) Object.assign(win.style, restoreBounds);
+      } else {
+        restoreBounds = { left: win.style.left, top: win.style.top, width: win.style.width, height: win.style.height };
+        win.classList.remove("rgv-window-minimized");
+        win.classList.add("rgv-window-maximized");
+        win.style.left = "0px";
+        win.style.top = "0px";
+        win.style.width = "100vw";
+        win.style.height = "100vh";
+      }
+      if (explorer.resize) explorer.resize();
+    });
+
+    return { el: win, close: () => win.querySelector(".rgv-win-close").click() };
+  }
+
+  // Looks up a Mini-Area by id (globally across the realm, same as
+  // attachInteraction's click handling) and opens it in a new floating
+  // window. This is the one place both the public marker popup and the
+  // in-canvas connector-room click end up calling.
+  function openMiniAreaWindow(index, maId) {
+    const entry = index.miniAreasById.get(maId);
+    if (!entry) { console.warn("Mini-Area link is broken (id not found):", maId); return null; }
+    return openWindow(index, entry.ma, entry.ma.name);
+  }
+
+  return { buildIndex, createExplorer, renderNode, openMiniAreaWindow };
 })();

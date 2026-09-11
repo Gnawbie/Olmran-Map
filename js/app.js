@@ -20,6 +20,14 @@
     return realmIndexCache.get(layerId);
   }
 
+  // A realm with Test-Builder room-graph data gets a second, separately
+  // selectable "<Realm> WIP" layer entry (id `<realmLayerId>-wip`) rather
+  // than replacing that realm's normal flat-image layer -- the two are
+  // independent views a user picks between, not a fallback/override pair.
+  const WIP_SUFFIX = "-wip";
+  function isWipLayerId(id) { return id.endsWith(WIP_SUFFIX); }
+  function baseLayerIdFor(wipId) { return wipId.slice(0, -WIP_SUFFIX.length); }
+
   const layerById = new Map(MAP_LAYERS.map(l => [l.id, l]));
   let currentLayerId = MAP_LAYERS[0].id;
   let imageLayer = null;
@@ -50,28 +58,30 @@
     return [[0, 0], [layer.height, layer.width]];
   }
 
-  // A realm with room-graph data (currently just Kaid) renders its exported
-  // root Area directly in #room-graph-root, using the same renderer as the
-  // public "View Area Map" popup and the moderator's raw browser -- there's
-  // no separate "Realm View" layout system, because Test Builder exports a
-  // realm as one big top-level Area already. A realm with no data yet
-  // (Evil/Good/Chaos) falls back to the flat map image via Leaflet, same as
-  // before.
+  // WIP room-graph layers render a realm's exported root Area directly in
+  // #room-graph-root, using the same renderer as the public "View Area Map"
+  // popup and the moderator's raw browser -- there's no separate "Realm
+  // View" layout system needed, because Test Builder exports a realm as one
+  // big top-level Area already. Regular layers keep the original Leaflet +
+  // flat-image behavior untouched.
   function switchLayer(layerId) {
-    const layer = layerById.get(layerId);
-    if (!layer) return;
-    currentLayerId = layerId;
-    const rootAreas = REALM_DATA_BY_LAYER[layerId] || [];
     const toggle = document.getElementById("color-layer-toggle");
 
-    if (rootAreas.length > 0) {
+    if (isWipLayerId(layerId)) {
+      const baseId = baseLayerIdFor(layerId);
+      const rootAreas = REALM_DATA_BY_LAYER[baseId] || [];
+      if (rootAreas.length === 0) return;
+      currentLayerId = layerId;
       mapEl.hidden = true;
       roomGraphRoot.hidden = false;
       toggle.hidden = true;
-      const idx = realmIndexFor(layerId);
+      const idx = realmIndexFor(baseId);
       const rootArea = rootAreas[0];
       RoomGraphView.createExplorer(roomGraphRoot, idx).show(rootArea, rootArea.name);
     } else {
+      const layer = layerById.get(layerId);
+      if (!layer) return;
+      currentLayerId = layerId;
       roomGraphRoot.hidden = true;
       mapEl.hidden = false;
       const bounds = boundsFor(layer);
@@ -109,6 +119,17 @@
     opt.value = l.id; opt.textContent = l.name;
     layerSelect.appendChild(opt);
   });
+  // One "<Realm> WIP" option per realm that has Test-Builder room-graph
+  // data -- added automatically as realms get built out, nothing to update
+  // here when the next one (Evil/Good/Chaos) gets its own export.
+  MAP_LAYERS.forEach(l => {
+    const rootAreas = REALM_DATA_BY_LAYER[l.id] || [];
+    if (rootAreas.length === 0) return;
+    const realmName = rootAreas[0].realm || rootAreas[0].name || l.name;
+    const opt = document.createElement("option");
+    opt.value = l.id + WIP_SUFFIX; opt.textContent = realmName + " WIP";
+    layerSelect.appendChild(opt);
+  });
   layerSelect.addEventListener("change", () => switchLayer(layerSelect.value));
 
   // ---- markers ----
@@ -141,25 +162,8 @@
     if (!area) { console.warn("Mini-Area link points at an unknown area:", areaId); return; }
     const room = (area.rooms || []).find(r => r.id === roomId);
     const maId = room && room.connector && room.connector.targetMiniAreaId;
-    const entry = maId && idx.miniAreasById.get(maId);
-    if (!entry) { console.warn("Mini-Area link is broken (room/connector not found):", areaId, roomId); return; }
-
-    const backdrop = document.createElement("div");
-    backdrop.className = "rgv-modal-backdrop";
-    backdrop.innerHTML = `
-      <div class="rgv-modal">
-        <div class="rgv-modal-header">
-          <span>${entry.ma.name}</span>
-          <button class="rgv-modal-close" type="button">✕</button>
-        </div>
-        <div class="rgv-modal-body"></div>
-      </div>`;
-    document.body.appendChild(backdrop);
-    const explorer = RoomGraphView.createExplorer(backdrop.querySelector(".rgv-modal-body"), idx);
-    explorer.show(entry.ma, entry.ma.name);
-    function close() { document.body.removeChild(backdrop); }
-    backdrop.querySelector(".rgv-modal-close").addEventListener("click", close);
-    backdrop.addEventListener("click", e => { if (e.target === backdrop) close(); });
+    if (!maId) { console.warn("Mini-Area link is broken (room/connector not found):", areaId, roomId); return; }
+    RoomGraphView.openMiniAreaWindow(idx, maId);
   }
 
   function renderMarkers() {

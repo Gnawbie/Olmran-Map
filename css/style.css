@@ -210,44 +210,61 @@ html, body {
 #item-browser .item-name { font-weight: 600; }
 #item-browser .item-meta { color: var(--muted); }
 
-/* ---- modal (shared: Mini-Area viewer) ---- */
-.rgv-modal-backdrop {
+/* ---- floating Mini-Area windows (shared: Mini-Area viewer) ---- */
+.rgv-windows-layer {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.55);
   z-index: 2000;
+  pointer-events: none;
+}
+.rgv-window {
+  position: absolute;
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  min-width: 300px;
+  min-height: 180px;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+  overflow: hidden;
+  resize: both;
+}
+.rgv-window-maximized { border-radius: 0; resize: none; }
+.rgv-window-minimized { resize: none; min-height: 0; }
+.rgv-window-minimized .rgv-window-body { display: none; }
+.rgv-window-titlebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 8px 8px 14px;
+  border-bottom: 1px solid var(--panel-border);
+  font-weight: 600;
+  font-size: 13px;
+  cursor: grab;
+  user-select: none;
+  flex: none;
+}
+.rgv-window-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rgv-window-controls { display: flex; gap: 4px; flex: none; }
+.rgv-win-btn {
+  width: 24px;
+  height: 24px;
+  background: none;
+  border: 1px solid var(--panel-border);
+  color: var(--muted);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
   display: flex;
   align-items: center;
   justify-content: center;
 }
-.rgv-modal {
-  width: min(900px, 92vw);
-  height: min(650px, 82vh);
-  background: var(--panel-bg);
-  border: 1px solid var(--panel-border);
-  border-radius: 8px;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-.rgv-modal-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 14px;
-  border-bottom: 1px solid var(--panel-border);
-  font-weight: 600;
-}
-.rgv-modal-close {
-  background: none;
-  border: none;
-  color: var(--muted);
-  font-size: 18px;
-  cursor: pointer;
-  line-height: 1;
-}
-.rgv-modal-close:hover { color: var(--text); }
-.rgv-modal-body { flex: 1; min-height: 0; }
+.rgv-win-btn:hover { color: var(--text); border-color: var(--accent); }
+.rgv-win-close:hover { color: var(--danger); border-color: var(--danger); }
+.rgv-window-body { flex: 1; min-height: 0; }
 
 /* ---- room-graph-view (shared with moderator.css) ---- */
 .rgv-explorer { display: flex; flex-direction: column; height: 100%; }
