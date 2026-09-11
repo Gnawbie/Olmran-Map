@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Land of Olmran — Interactive Map</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+<link rel="stylesheet" href="css/style.css?v=1">
+</head>
+<body>
+<div id="app">
+  <div id="map"></div>
+
+  <div id="toolbar">
+    <div id="brand" class="panel">Land of Olmran</div>
+    <select id="layer-select" class="panel"></select>
+    <div id="search-wrap">
+      <input id="search-box" class="panel" type="text" placeholder="Jump to zone…" autocomplete="off">
+      <div id="search-results" class="panel"></div>
+    </div>
+    <button id="color-layer-toggle" class="panel" hidden>Color Layer</button>
+    <button id="item-browser-toggle" class="panel mod-link" type="button">Items</button>
+    <a id="mod-link" class="mod-link panel" href="moderator.html" target="_blank" rel="noopener">Moderator ↗</a>
+  </div>
+
+  <div id="filter-chips"></div>
+
+  <div id="item-browser" class="panel">
+    <h3>Zone Items</h3>
+    <div id="item-browser-body">
+      <p style="color: var(--muted); font-size: 12px;">Click a zone on the map, or search for one, to see its items here.</p>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+  integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="js/data/layers.js?v=1"></script>
+<script src="js/data/zones.js?v=1"></script>
+<script src="js/data/markers.js?v=1"></script>
+<script src="js/data/zone-items.js?v=1"></script>
+<script src="js/data/realm-graph/chaos.js?v=1"></script>
+<script src="js/data/realm-graph/evil.js?v=1"></script>
+<script src="js/data/realm-graph/good.js?v=1"></script>
+<script src="js/data/realm-graph/kaid.js?v=1"></script>
+<script src="js/room-graph-view.js?v=1"></script>
+<script src="js/app.js?v=1"></script>
+</body>
+</html>

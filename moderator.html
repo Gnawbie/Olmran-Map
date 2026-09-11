@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Olmran Map — Moderator Panel</title>
+<link rel="stylesheet" href="css/style.css?v=1">
+<link rel="stylesheet" href="css/moderator.css?v=1">
+</head>
+<body>
+
+<div id="login-gate">
+  <div id="login-gate-modal" class="panel">
+    <h1>Moderator Login</h1>
+    <p>This panel is for map moderators only.</p>
+    <label for="login-username">Username</label>
+    <input id="login-username" type="text" autocomplete="username">
+    <label for="login-password">Password</label>
+    <input id="login-password" type="password" autocomplete="current-password">
+    <div id="login-gate-error"></div>
+    <button id="login-submit" class="primary" type="button">Log in</button>
+    <p style="margin-top:14px;"><a href="index.html" style="color: var(--muted);">← Back to map</a></p>
+  </div>
+</div>
+
+<div id="builder-app" hidden>
+  <div id="mod-header">
+    <h1>Olmran Map — Moderator Panel</h1>
+    <div style="display:flex; align-items:center; gap:14px;">
+      <span id="mod-session"></span>
+      <a href="index.html" class="mod-link" style="color: var(--muted); text-decoration:none;">View public map ↗</a>
+      <button id="logout-btn" type="button">Log out</button>
+    </div>
+  </div>
+
+  <div id="mod-tabs">
+    <button class="mod-tab-btn active" data-tab="markers">Markers</button>
+    <button class="mod-tab-btn" data-tab="zones">Zones</button>
+    <button class="mod-tab-btn" data-tab="graph">Room Graph</button>
+    <button class="mod-tab-btn" data-tab="import">Accept Updated Map</button>
+    <button class="mod-tab-btn" data-tab="accounts">Accounts</button>
+  </div>
+
+  <div id="tab-markers" class="mod-tab-panel active">
+    <h2 style="font-size:14px;">Add / Edit Marker</h2>
+    <form id="marker-form" class="mod-form">
+      <input type="hidden" id="marker-edit-id">
+      <div><label>Name</label><input id="marker-name" required></div>
+      <div><label>Type</label><input id="marker-type" placeholder="bank, shop, healer…" required></div>
+      <div><label>Realm / Layer</label><select id="marker-layer"></select></div>
+      <div><label>X</label><input id="marker-x" type="number" required></div>
+      <div><label>Y</label><input id="marker-y" type="number" required></div>
+      <div class="full"><label>Description</label><input id="marker-description"></div>
+      <div><label>Mini-Area: Area ID (optional)</label><input id="marker-ma-area"></div>
+      <div><label>Mini-Area: Room ID (optional)</label><input id="marker-ma-room"></div>
+      <div class="full">
+        <button type="submit" class="mod-btn">Save Marker</button>
+        <button type="button" id="marker-cancel-edit" class="mod-btn secondary">Cancel Edit</button>
+      </div>
+    </form>
+    <table class="mod-table">
+      <thead><tr><th>Name</th><th>Type</th><th>Realm</th><th>X,Y</th><th>Mini-Area</th><th></th></tr></thead>
+      <tbody id="marker-table-body"></tbody>
+    </table>
+    <div class="export-output">
+      <button id="copy-markers-btn" class="mod-btn secondary">Copy updated markers.js</button>
+    </div>
+  </div>
+
+  <div id="tab-zones" class="mod-tab-panel">
+    <h2 style="font-size:14px;">Add / Edit Zone</h2>
+    <form id="zone-form" class="mod-form">
+      <input type="hidden" id="zone-edit-index" value="-1">
+      <div><label>Name</label><input id="zone-name" required></div>
+      <div><label>Realm / Layer</label><select id="zone-layer"></select></div>
+      <div><label>X</label><input id="zone-x" type="number" required></div>
+      <div><label>Y</label><input id="zone-y" type="number" required></div>
+      <div class="full">
+        <button type="submit" class="mod-btn">Save Zone</button>
+        <button type="button" id="zone-cancel-edit" class="mod-btn secondary">Cancel Edit</button>
+      </div>
+    </form>
+    <table class="mod-table">
+      <thead><tr><th>Name</th><th>Realm</th><th>X,Y</th><th></th></tr></thead>
+      <tbody id="zone-table-body"></tbody>
+    </table>
+    <div class="export-output">
+      <button id="copy-zones-btn" class="mod-btn secondary">Copy updated zones.js</button>
+    </div>
+  </div>
+
+  <div id="tab-graph" class="mod-tab-panel">
+    <p style="color: var(--muted); font-size: 12px; max-width: 640px;">
+      Unfiltered, read-only view of the full room graph exported from the Test Builder tool —
+      every Realm and Area, including Mini-Area drill-down. No dragging or editing here; use
+      Test Builder for that.
+    </p>
+    <div class="mod-graph-picker">
+      <select id="graph-realm-select"></select>
+      <select id="graph-area-select"></select>
+    </div>
+    <div id="room-graph-canvas"></div>
+  </div>
+
+  <div id="tab-import" class="mod-tab-panel">
+    <p style="color: var(--muted); font-size: 12px; max-width: 640px;">
+      Paste the JSON from Test Builder's "Copy ALL Areas (JSON)" button below. This only
+      replaces the room-graph data (<code>js/data/realm-graph/&lt;realm&gt;.js</code>) — your
+      markers and zones are never touched by this.
+    </p>
+    <textarea id="import-json" class="mod-json" placeholder="Paste exported JSON here…"></textarea>
+    <div>
+      <button id="import-preview-btn" class="mod-btn">Preview Import</button>
+    </div>
+    <div id="import-summary"></div>
+    <div id="import-export-output" class="export-output"></div>
+  </div>
+
+  <div id="tab-accounts" class="mod-tab-panel">
+    <h2 style="font-size:14px;">Add Account</h2>
+    <form id="account-form" class="mod-form">
+      <div><label>Username</label><input id="account-username" required></div>
+      <div><label>Password</label><input id="account-password" type="password" required></div>
+      <div><label>Role</label><select id="account-role"><option value="mod">mod</option><option value="main">main</option></select></div>
+      <div class="full"><button type="submit" class="mod-btn">Add Account</button></div>
+    </form>
+    <table class="mod-table">
+      <thead><tr><th>Username</th><th>Role</th><th></th></tr></thead>
+      <tbody id="account-table-body"></tbody>
+    </table>
+    <div class="export-output">
+      <button id="copy-accounts-btn" class="mod-btn secondary">Copy updated mod-accounts.js</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/data/mod-accounts.js?v=1"></script>
+<script src="js/data/layers.js?v=1"></script>
+<script src="js/data/zones.js?v=1"></script>
+<script src="js/data/markers.js?v=1"></script>
+<script src="js/data/realm-graph/chaos.js?v=1"></script>
+<script src="js/data/realm-graph/evil.js?v=1"></script>
+<script src="js/data/realm-graph/good.js?v=1"></script>
+<script src="js/data/realm-graph/kaid.js?v=1"></script>
+<script src="js/room-graph-view.js?v=1"></script>
+<script src="js/auth.js?v=1"></script>
+<script src="js/moderator.js?v=1"></script>
+</body>
+</html>
