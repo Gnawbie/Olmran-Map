@@ -25,6 +25,8 @@
   let imageLayer = null;
   let colorLayer = null;
   let markerLayerGroup = L.layerGroup();
+  const mapEl = document.getElementById("map");
+  const roomGraphRoot = document.getElementById("room-graph-root");
   // Chips default to ON; this tracks which types the user has explicitly
   // turned OFF (rather than which are on) so switching realms doesn't hide
   // markers on a realm whose types haven't been seen/toggled yet.
@@ -48,24 +50,46 @@
     return [[0, 0], [layer.height, layer.width]];
   }
 
+  // A realm with room-graph data (currently just Kaid) renders its exported
+  // root Area directly in #room-graph-root, using the same renderer as the
+  // public "View Area Map" popup and the moderator's raw browser -- there's
+  // no separate "Realm View" layout system, because Test Builder exports a
+  // realm as one big top-level Area already. A realm with no data yet
+  // (Evil/Good/Chaos) falls back to the flat map image via Leaflet, same as
+  // before.
   function switchLayer(layerId) {
     const layer = layerById.get(layerId);
     if (!layer) return;
     currentLayerId = layerId;
-    const bounds = boundsFor(layer);
-    if (imageLayer) map.removeLayer(imageLayer);
-    imageLayer = L.imageOverlay(layer.image, bounds).addTo(map);
-    if (colorLayer) { map.removeLayer(colorLayer); colorLayer = null; }
+    const rootAreas = REALM_DATA_BY_LAYER[layerId] || [];
     const toggle = document.getElementById("color-layer-toggle");
-    if (layer.colorImage) {
-      colorLayer = L.imageOverlay(layer.colorImage, bounds, { opacity: 0.6 });
-      toggle.hidden = false;
-      toggle.classList.remove("active");
-      if (toggle.dataset.on === "1") { colorLayer.addTo(map); toggle.classList.add("active"); }
-    } else {
+
+    if (rootAreas.length > 0) {
+      mapEl.hidden = true;
+      roomGraphRoot.hidden = false;
       toggle.hidden = true;
+      const idx = realmIndexFor(layerId);
+      const rootArea = rootAreas[0];
+      RoomGraphView.createExplorer(roomGraphRoot, idx).show(rootArea, rootArea.name);
+    } else {
+      roomGraphRoot.hidden = true;
+      mapEl.hidden = false;
+      const bounds = boundsFor(layer);
+      if (imageLayer) map.removeLayer(imageLayer);
+      imageLayer = L.imageOverlay(layer.image, bounds).addTo(map);
+      if (colorLayer) { map.removeLayer(colorLayer); colorLayer = null; }
+      if (layer.colorImage) {
+        colorLayer = L.imageOverlay(layer.colorImage, bounds, { opacity: 0.6 });
+        toggle.hidden = false;
+        toggle.classList.remove("active");
+        if (toggle.dataset.on === "1") { colorLayer.addTo(map); toggle.classList.add("active"); }
+      } else {
+        toggle.hidden = true;
+      }
+      map.invalidateSize();
+      map.fitBounds(bounds);
     }
-    map.fitBounds(bounds);
+
     document.getElementById("layer-select").value = layerId;
     renderFilterChips();
     renderMarkers();

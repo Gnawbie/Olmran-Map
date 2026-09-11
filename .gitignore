@@ -1,2 +1,6 @@
 .DS_Store
 Thumbs.db
+
+# Raw Test Builder clipboard export, kept locally as a backup of the source
+# data behind js/data/realm-graph/*.js -- not needed in the repo itself.
+Builder Export.txt
