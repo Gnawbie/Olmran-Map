@@ -58,6 +58,26 @@
     return [[0, 0], [layer.height, layer.width]];
   }
 
+  // Registers the color-layer overlay against the base image using a single
+  // translation: `layer.colorMapAnchor` is the base image's pixel coordinate
+  // that the realm-graph's `isCenter`-flagged room should land on. Shifting
+  // the color image's full-size bounds by (anchor - that room's room-graph
+  // coordinate) assumes the color image was rendered at the same pixel
+  // scale as the base image -- no scale/rotation correction, by design (see
+  // js/data/layers.js). Falls back to the base image's own bounds (no
+  // shift) whenever either half of the registration is missing.
+  function colorImageBoundsFor(layer, baseBounds) {
+    const anchor = layer.colorMapAnchor;
+    if (!anchor) return baseBounds;
+    const center = realmIndexFor(layer.id).centerPoint;
+    if (!center) return baseBounds;
+    const dx = anchor.x - center.x;
+    const dy = anchor.y - center.y;
+    const sw = pixelToLatLng(layer, dx, dy + layer.height);
+    const ne = pixelToLatLng(layer, dx + layer.width, dy);
+    return [[sw.lat, sw.lng], [ne.lat, ne.lng]];
+  }
+
   // WIP room-graph layers render a realm's exported root Area directly in
   // #room-graph-root, using the same renderer as the public "View Area Map"
   // popup and the moderator's raw browser -- there's no separate "Realm
@@ -89,7 +109,7 @@
       imageLayer = L.imageOverlay(layer.image, bounds).addTo(map);
       if (colorLayer) { map.removeLayer(colorLayer); colorLayer = null; }
       if (layer.colorImage) {
-        colorLayer = L.imageOverlay(layer.colorImage, bounds, { opacity: 0.6 });
+        colorLayer = L.imageOverlay(layer.colorImage, colorImageBoundsFor(layer, bounds), { opacity: 0.6 });
         toggle.hidden = false;
         toggle.classList.remove("active");
         if (toggle.dataset.on === "1") { colorLayer.addTo(map); toggle.classList.add("active"); }

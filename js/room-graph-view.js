@@ -275,6 +275,20 @@ const RoomGraphView = (function () {
   // and Mini-Area-by-id (+ its owning Area id) — Mini-Area links resolve
   // globally across the whole realm, not just within the clicked Area, per
   // the original Test-builder editor's own lookup behavior.
+  //
+  // `centerPoint` is the room-graph-space coordinate of the one room (if
+  // any, across the realm's top-level Areas only) flagged `isCenter` in
+  // Test Builder — used to register a realm's color-layer overlay image
+  // against this coordinate space (see app.js). Not searched inside
+  // Mini-Areas: the flag is a single realm-wide anchor, not per-Mini-Area.
+  function findCenterRoom(realmAreas) {
+    for (const area of realmAreas || []) {
+      const room = (area.rooms || []).find(r => r.isCenter);
+      if (room) return roomCenter(area, room);
+    }
+    return null;
+  }
+
   function buildIndex(realmAreas) {
     const areasById = new Map();
     const miniAreasById = new Map();
@@ -282,7 +296,7 @@ const RoomGraphView = (function () {
       areasById.set(area.id, area);
       (area.miniAreas || []).forEach(ma => miniAreasById.set(ma.id, { ma, ownerAreaId: area.id }));
     });
-    return { areasById, miniAreasById };
+    return { areasById, miniAreasById, centerPoint: findCenterRoom(realmAreas) };
   }
 
   // Creates a self-contained viewer inside `container`: a small toolbar
