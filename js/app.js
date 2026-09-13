@@ -379,7 +379,7 @@
     flagRealmInput.value = r.realmName;
     flagRealmResults.classList.remove("open");
     flagAreaInput.disabled = false;
-    flagAreaInput.placeholder = "Search areas…";
+    flagAreaInput.placeholder = "Select an area…";
     flagAreaInput.value = "";
     switchLayer(r.layerId + WIP_SUFFIX);
   }
@@ -439,6 +439,18 @@
     });
   }
 
+  // Behaves like a <select> that also happens to be searchable: clicking or
+  // focusing the field (with nothing typed yet) opens the FULL option list,
+  // exactly like a dropdown would, rather than requiring you to type first;
+  // typing then narrows that same list via the fuzzy matcher above.
+  function openFlagRealmResults() {
+    renderFlagResults(flagRealmResults, "", flagRealms, r => r.realmName, selectFlagRealm);
+  }
+  function openFlagAreaResults() {
+    if (!selectedFlagRealm) return;
+    renderFlagResults(flagAreaResults, "", selectedFlagRealm.areas, a => a.name, selectFlagArea);
+  }
+
   flagRealmInput.addEventListener("input", () => {
     selectedFlagRealm = null;
     flagAreaInput.disabled = true;
@@ -447,17 +459,14 @@
     flagAreaResults.classList.remove("open");
     renderFlagResults(flagRealmResults, flagRealmInput.value, flagRealms, r => r.realmName, selectFlagRealm);
   });
-  flagRealmInput.addEventListener("focus", () => {
-    renderFlagResults(flagRealmResults, flagRealmInput.value, flagRealms, r => r.realmName, selectFlagRealm);
-  });
+  flagRealmInput.addEventListener("focus", openFlagRealmResults);
+  flagRealmInput.addEventListener("click", openFlagRealmResults);
   flagAreaInput.addEventListener("input", () => {
     if (!selectedFlagRealm) return;
     renderFlagResults(flagAreaResults, flagAreaInput.value, selectedFlagRealm.areas, a => a.name, selectFlagArea);
   });
-  flagAreaInput.addEventListener("focus", () => {
-    if (!selectedFlagRealm) return;
-    renderFlagResults(flagAreaResults, flagAreaInput.value, selectedFlagRealm.areas, a => a.name, selectFlagArea);
-  });
+  flagAreaInput.addEventListener("focus", openFlagAreaResults);
+  flagAreaInput.addEventListener("click", openFlagAreaResults);
   document.addEventListener("click", e => {
     if (!e.target.closest("#flag-nav")) {
       flagRealmResults.classList.remove("open");
