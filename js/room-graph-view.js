@@ -267,8 +267,21 @@ const RoomGraphView = (function () {
       apply();
     }, { passive: false });
 
+    // Centers the view on a room-graph-space point, e.g. an area's flag
+    // (see js/app.js's flag-navigation sidebar) -- optionally also setting
+    // the zoom scale, since fit()'s whole-realm scale is usually too far
+    // zoomed out to make sense of a single flagged spot.
+    function centerOn(x, y, scale) {
+      const rect = svg.getBoundingClientRect();
+      const vw = rect.width || 600, vh = rect.height || 400;
+      if (typeof scale === "number") view.scale = scale;
+      view.x = vw / 2 - x * view.scale;
+      view.y = vh / 2 - y * view.scale;
+      apply();
+    }
+
     fit();
-    return { fit, zoomBy: f => { view.scale = Math.max(0.02, Math.min(6, view.scale * f)); apply(); } };
+    return { fit, zoomBy: f => { view.scale = Math.max(0.02, Math.min(6, view.scale * f)); apply(); }, centerOn };
   }
 
   // Builds a lookup index for one realm's exported Area array: Area-by-id
@@ -370,7 +383,8 @@ const RoomGraphView = (function () {
         stack = [{ node, title }];
         draw();
       },
-      resize() { if (interaction) interaction.fit(); }
+      resize() { if (interaction) interaction.fit(); },
+      centerOn(x, y, scale) { if (interaction) interaction.centerOn(x, y, scale); }
     };
   }
 

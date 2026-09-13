@@ -84,7 +84,14 @@
   // View" layout system needed, because Test Builder exports a realm as one
   // big top-level Area already. Regular layers keep the original Leaflet +
   // flat-image behavior untouched.
-  function switchLayer(layerId) {
+  // `opts.areaId` shows a specific Area instead of defaulting to the
+  // realm's first one (used by the flag-navigation sidebar to jump to a
+  // particular area within a multi-area realm); `opts.focus` (`{x, y,
+  // scale}`, room-graph-space) re-centers the freshly-shown explorer on a
+  // point within it -- typically that area's flag -- instead of leaving it
+  // at its whole-realm fit().
+  function switchLayer(layerId, opts) {
+    opts = opts || {};
     const toggle = document.getElementById("color-layer-toggle");
 
     if (isWipLayerId(layerId)) {
@@ -96,8 +103,10 @@
       roomGraphRoot.hidden = false;
       toggle.hidden = true;
       const idx = realmIndexFor(baseId);
-      const rootArea = rootAreas[0];
-      RoomGraphView.createExplorer(roomGraphRoot, idx).show(rootArea, rootArea.name);
+      const targetArea = (opts.areaId && idx.areasById.get(opts.areaId)) || rootAreas[0];
+      const explorer = RoomGraphView.createExplorer(roomGraphRoot, idx);
+      explorer.show(targetArea, targetArea.name);
+      if (opts.focus) explorer.centerOn(opts.focus.x, opts.focus.y, opts.focus.scale);
     } else {
       const layer = layerById.get(layerId);
       if (!layer) return;
@@ -273,6 +282,188 @@
         </div>`).join("");
     itemBrowser.classList.add("open");
   }
+
+  // ---- flag navigation sidebar ----
+  // Lets a visitor jump straight to a specific area's flag (a {x, y, name}
+  // point placed per-area in Test Builder -- see js/room-graph-view.js's
+  // centerOn) instead of only ever landing on a realm's whole-map fit().
+  // Realm and Area are searched with the same typo-tolerant matching so a
+  // misspelled guess still finds the right one.
+  function levenshtein(a, b) {
+    const m = a.length, n = b.length;
+    if (m === 0) return n;
+    if (n === 0) return m;
+    let prev = new Array(n + 1);
+    for (let j = 0; j <= n; j++) prev[j] = j;
+    for (let i = 1; i <= m; i++) {
+      const cur = [i];
+      for (let j = 1; j <= n; j++) {
+        const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+        cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + cost);
+      }
+      prev = cur;
+    }
+    return prev[n];
+  }
+
+  // Higher score = better match, -1 = no match. A substring hit always
+  // wins (typed-so-far partial matches, the common case); otherwise a
+  // small edit distance against the whole name OR any single word within
+  // it (so "kaidd" still finds "Land of Kaid" via just the "Kaid" word,
+  // not the whole phrase's much larger distance) counts as a misspelling.
+  function fuzzyScore(query, name) {
+    const q = query.trim().toLowerCase();
+    if (!q) return 0;
+    const n = name.toLowerCase();
+    if (n.includes(q)) return 1000 - Math.abs(n.length - q.length);
+    const tolerance = Math.max(1, Math.ceil(q.length / 3));
+    let best = Infinity;
+    n.split(/\s+/).concat([n]).forEach(word => {
+      best = Math.min(best, levenshtein(q, word));
+    });
+    return best <= tolerance ? 500 - best : -1;
+  }
+
+  function buildFlagRealms() {
+    const realms = [];
+    MAP_LAYERS.forEach(l => {
+      const areas = REALM_DATA_BY_LAYER[l.id] || [];
+      const flagged = areas.filter(a => a.flag);
+      if (flagged.length === 0) return;
+      const realmName = areas[0].realm || areas[0].name || l.name;
+      realms.push({
+        layerId: l.id,
+        realmName,
+        areas: flagged.map(a => ({ areaId: a.id, name: a.flag.name || a.name, x: a.flag.x, y: a.flag.y }))
+      });
+    });
+    return realms;
+  }
+  const flagRealms = buildFlagRealms();
+
+  const flagNavPanel = document.getElementById("flag-nav");
+  const flagNavToggleBtn = document.getElementById("flag-nav-toggle-btn");
+  const flagRealmInput = document.getElementById("flag-nav-realm-input");
+  const flagRealmResults = document.getElementById("flag-nav-realm-results");
+  const flagAreaInput = document.getElementById("flag-nav-area-input");
+  const flagAreaResults = document.getElementById("flag-nav-area-results");
+  let selectedFlagRealm = null;
+
+  flagNavToggleBtn.addEventListener("click", () => {
+    const collapsed = flagNavPanel.classList.toggle("collapsed");
+    flagNavToggleBtn.textContent = collapsed ? "‹" : "›";
+    flagNavToggleBtn.title = collapsed ? "Show the jump-to-area panel" : "Hide the jump-to-area panel";
+  });
+
+  function renderFlagResults(container, query, items, labelOf, onPick) {
+    container.innerHTML = "";
+    const q = query.trim();
+    const scored = items
+      .map(item => ({ item, score: fuzzyScore(q, labelOf(item)) }))
+      .filter(x => q === "" || x.score >= 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 20);
+    if (scored.length === 0) { container.classList.remove("open"); return; }
+    scored.forEach(({ item }) => {
+      const row = document.createElement("div");
+      row.className = "search-result";
+      row.textContent = labelOf(item);
+      row.addEventListener("click", () => onPick(item));
+      container.appendChild(row);
+    });
+    container.classList.add("open");
+  }
+
+  function selectFlagRealm(r) {
+    selectedFlagRealm = r;
+    flagRealmInput.value = r.realmName;
+    flagRealmResults.classList.remove("open");
+    flagAreaInput.disabled = false;
+    flagAreaInput.placeholder = "Search areas…";
+    flagAreaInput.value = "";
+    switchLayer(r.layerId + WIP_SUFFIX);
+  }
+
+  function selectFlagArea(a) {
+    flagAreaInput.value = a.name;
+    flagAreaResults.classList.remove("open");
+    renderItemsTree(a.name);
+    if (flagNoZoomToggle.checked) return;
+    switchLayer(selectedFlagRealm.layerId + WIP_SUFFIX, { areaId: a.areaId, focus: { x: a.x, y: a.y, scale: 1.2 } });
+  }
+
+  // ---- Items tab: a tree of {item -> monsters that drop it} for whichever
+  // area was last picked in the Jump tab, keyed by that area's flag name
+  // (see js/data/area-items.js -- empty until a real per-area drop export
+  // exists). "Don't zoom to area" lets you browse this list across several
+  // areas without the map jumping to each one.
+  const flagNavTabs = document.querySelectorAll(".flag-nav-tab");
+  const flagNavTabPanels = {
+    jump: document.getElementById("flag-nav-tab-jump"),
+    items: document.getElementById("flag-nav-tab-items")
+  };
+  flagNavTabs.forEach(tab => {
+    tab.addEventListener("click", () => {
+      flagNavTabs.forEach(t => t.classList.toggle("active", t === tab));
+      Object.keys(flagNavTabPanels).forEach(key => {
+        flagNavTabPanels[key].classList.toggle("hidden", key !== tab.dataset.tab);
+      });
+    });
+  });
+
+  const flagNoZoomToggle = document.getElementById("flag-nav-no-zoom-toggle");
+  const itemsTreeEl = document.getElementById("flag-nav-items-tree");
+
+  function renderItemsTree(areaName) {
+    itemsTreeEl.innerHTML = "";
+    const items = (typeof AREA_ITEMS !== "undefined" && AREA_ITEMS[areaName]) || [];
+    if (items.length === 0) {
+      itemsTreeEl.innerHTML = `<div class="muted">No item data for "${escapeHtml(areaName)}" yet.</div>`;
+      return;
+    }
+    items.forEach(it => {
+      const details = document.createElement("details");
+      details.className = "flag-nav-item-node";
+      const summary = document.createElement("summary");
+      summary.textContent = it.item + (it.type ? ` (${it.type})` : "");
+      details.appendChild(summary);
+      const list = document.createElement("ul");
+      list.className = "flag-nav-monster-list";
+      (it.monsters || []).forEach(m => {
+        const li = document.createElement("li");
+        li.textContent = m;
+        list.appendChild(li);
+      });
+      details.appendChild(list);
+      itemsTreeEl.appendChild(details);
+    });
+  }
+
+  flagRealmInput.addEventListener("input", () => {
+    selectedFlagRealm = null;
+    flagAreaInput.disabled = true;
+    flagAreaInput.value = "";
+    flagAreaInput.placeholder = "Pick a realm first…";
+    flagAreaResults.classList.remove("open");
+    renderFlagResults(flagRealmResults, flagRealmInput.value, flagRealms, r => r.realmName, selectFlagRealm);
+  });
+  flagRealmInput.addEventListener("focus", () => {
+    renderFlagResults(flagRealmResults, flagRealmInput.value, flagRealms, r => r.realmName, selectFlagRealm);
+  });
+  flagAreaInput.addEventListener("input", () => {
+    if (!selectedFlagRealm) return;
+    renderFlagResults(flagAreaResults, flagAreaInput.value, selectedFlagRealm.areas, a => a.name, selectFlagArea);
+  });
+  flagAreaInput.addEventListener("focus", () => {
+    if (!selectedFlagRealm) return;
+    renderFlagResults(flagAreaResults, flagAreaInput.value, selectedFlagRealm.areas, a => a.name, selectFlagArea);
+  });
+  document.addEventListener("click", e => {
+    if (!e.target.closest("#flag-nav")) {
+      flagRealmResults.classList.remove("open");
+      flagAreaResults.classList.remove("open");
+    }
+  });
 
   switchLayer(currentLayerId);
 })();
