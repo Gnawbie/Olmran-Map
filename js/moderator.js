@@ -282,7 +282,7 @@
   // ---- accept updated map (import) tab ----
   let pendingImport = null; // { byRealmKey: { key -> Area[] } }
 
-  document.getElementById("import-preview-btn").addEventListener("click", () => {
+  function runImportPreview() {
     const raw = document.getElementById("import-json").value.trim();
     const summaryEl = document.getElementById("import-summary");
     const outputEl = document.getElementById("import-export-output");
@@ -326,6 +326,29 @@
       wrap.appendChild(h); wrap.appendChild(btn);
       outputEl.appendChild(wrap);
     });
+  }
+
+  document.getElementById("import-preview-btn").addEventListener("click", runImportPreview);
+
+  // Upload a JSON file instead of pasting -- reads it into the same
+  // textarea Preview Import already reads from, then runs the preview
+  // automatically (non-destructive: it only parses and shows a summary,
+  // nothing is written until you actually copy+paste a realm file
+  // yourself) so uploading really does "input the code automatically".
+  document.getElementById("import-json-file").addEventListener("change", (evt) => {
+    const file = evt.target.files[0];
+    if (!file) return;
+    document.getElementById("import-json-filename").textContent = file.name;
+    const reader = new FileReader();
+    reader.onload = () => {
+      document.getElementById("import-json").value = reader.result;
+      runImportPreview();
+    };
+    reader.onerror = () => {
+      document.getElementById("import-summary").innerHTML =
+        `<p style="color:var(--danger)">Couldn't read that file.</p>`;
+    };
+    reader.readAsText(file);
   });
 
   function formatRealmGraphFile(realm, areas) {

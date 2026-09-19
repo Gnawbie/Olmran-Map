@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Olmran Map — Moderator Panel</title>
-<link rel="stylesheet" href="css/style.css?v=5">
-<link rel="stylesheet" href="css/moderator.css?v=5">
+<link rel="stylesheet" href="css/style.css?v=6">
+<link rel="stylesheet" href="css/moderator.css?v=6">
 </head>
 <body>
 
@@ -108,7 +108,12 @@
       replaces the room-graph data (<code>js/data/realm-graph/&lt;realm&gt;.js</code>) — your
       markers and zones are never touched by this.
     </p>
-    <textarea id="import-json" class="mod-json" placeholder="Paste exported JSON here…"></textarea>
+    <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+      <label for="import-json-file" class="mod-btn secondary" style="cursor:pointer; display:inline-block;">Upload JSON File…</label>
+      <input type="file" id="import-json-file" accept=".json,.txt,application/json" hidden>
+      <span id="import-json-filename" style="color: var(--muted); font-size: 12px;"></span>
+    </div>
+    <textarea id="import-json" class="mod-json" placeholder="Paste exported JSON here… (or upload a file above)"></textarea>
     <div>
       <button id="import-preview-btn" class="mod-btn">Preview Import</button>
     </div>
@@ -134,16 +139,16 @@
   </div>
 </div>
 
-<script src="js/data/mod-accounts.js?v=5"></script>
-<script src="js/data/layers.js?v=5"></script>
-<script src="js/data/zones.js?v=5"></script>
-<script src="js/data/markers.js?v=5"></script>
-<script src="js/data/realm-graph/chaos.js?v=5"></script>
-<script src="js/data/realm-graph/evil.js?v=5"></script>
-<script src="js/data/realm-graph/good.js?v=5"></script>
-<script src="js/data/realm-graph/kaid.js?v=5"></script>
-<script src="js/room-graph-view.js?v=5"></script>
-<script src="js/auth.js?v=5"></script>
-<script src="js/moderator.js?v=5"></script>
+<script src="js/data/mod-accounts.js?v=6"></script>
+<script src="js/data/layers.js?v=6"></script>
+<script src="js/data/zones.js?v=6"></script>
+<script src="js/data/markers.js?v=6"></script>
+<script src="js/data/realm-graph/chaos.js?v=6"></script>
+<script src="js/data/realm-graph/evil.js?v=6"></script>
+<script src="js/data/realm-graph/good.js?v=6"></script>
+<script src="js/data/realm-graph/kaid.js?v=6"></script>
+<script src="js/room-graph-view.js?v=6"></script>
+<script src="js/auth.js?v=6"></script>
+<script src="js/moderator.js?v=6"></script>
 </body>
 </html>
