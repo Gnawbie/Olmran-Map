@@ -351,15 +351,23 @@
     const realms = [];
     MAP_LAYERS.forEach(l => {
       const areas = REALM_DATA_BY_LAYER[l.id] || [];
+      // Same non-empty-REALM_DATA_BY_LAYER gate used to decide whether this
+      // realm gets a "-wip" layer option at all -- no point listing it here
+      // if there's nowhere to actually switch to.
+      if (areas.length === 0) return;
       const flagEntries = [];
       areas.forEach(a => {
         (a.flags || []).forEach(flag => {
           flagEntries.push({ areaId: a.id, name: flag.name || a.name, x: flag.x, y: flag.y });
         });
       });
-      if (flagEntries.length === 0) return;
+      // Falls back to the realm's actual top-level areas (whole-area fit,
+      // no specific zoom point) when nothing has a real flag yet -- keeps
+      // every realm selectable in the Jump tab permanently instead of it
+      // vanishing until a moderator places flags.
+      const areaEntries = flagEntries.length > 0 ? flagEntries : areas.map(a => ({ areaId: a.id, name: a.name }));
       const realmName = areas[0].realm || areas[0].name || l.name;
-      realms.push({ layerId: l.id, realmName, areas: flagEntries });
+      realms.push({ layerId: l.id, realmName, areas: areaEntries });
     });
     return realms;
   }
@@ -452,7 +460,11 @@
     flagAreaResults.classList.remove("open");
     renderItemsTree(a.name);
     if (flagNoZoomToggle.checked) return;
-    switchLayer(selectedFlagRealm.layerId + WIP_SUFFIX, { areaId: a.areaId, focus: { x: a.x, y: a.y, scale: 1.2 } });
+    // A fallback (no-flag-yet) area entry has no x/y -- just show the whole
+    // area (switchLayer's own fit()) instead of a specific zoom point.
+    const opts = { areaId: a.areaId };
+    if (typeof a.x === "number" && typeof a.y === "number") opts.focus = { x: a.x, y: a.y, scale: 1.2 };
+    switchLayer(selectedFlagRealm.layerId + WIP_SUFFIX, opts);
   }
 
   // ---- Items tab: a tree of {item -> monsters that drop it} for whichever
