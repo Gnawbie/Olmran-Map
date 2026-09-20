@@ -397,6 +397,26 @@ const RoomGraphView = (function () {
   let windowZCounter = 3000;
   let windowCascade = 0;
 
+  // Remembers whatever size the user last resized ANY Mini-Area window to
+  // (shared across all of them, not per-area) so the next one opened starts
+  // at that size instead of always resetting to the hardcoded default.
+  // Per-device via localStorage -- no server round-trip, just a viewer
+  // preference.
+  const WINDOW_SIZE_STORAGE_KEY = "rgvMiniWindowSize";
+  const DEFAULT_WINDOW_SIZE = { width: 640, height: 460 };
+
+  function loadSavedWindowSize() {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(WINDOW_SIZE_STORAGE_KEY));
+      if (parsed && typeof parsed.width === "number" && typeof parsed.height === "number") return parsed;
+    } catch (e) { /* ignore malformed/blocked storage */ }
+    return null;
+  }
+  function saveWindowSize(width, height) {
+    try { localStorage.setItem(WINDOW_SIZE_STORAGE_KEY, JSON.stringify({ width, height })); }
+    catch (e) { /* storage unavailable -- size just won't persist */ }
+  }
+
   function ensureWindowsLayer() {
     let layer = document.querySelector(".rgv-windows-layer");
     if (!layer) {
@@ -419,8 +439,9 @@ const RoomGraphView = (function () {
     windowCascade = (windowCascade + 28) % 220;
     win.style.left = (60 + windowCascade) + "px";
     win.style.top = (60 + windowCascade) + "px";
-    win.style.width = "640px";
-    win.style.height = "460px";
+    const size = loadSavedWindowSize() || DEFAULT_WINDOW_SIZE;
+    win.style.width = size.width + "px";
+    win.style.height = size.height + "px";
     win.innerHTML =
       '<div class="rgv-window-titlebar">' +
         '<span class="rgv-window-title"></span>' +
@@ -458,7 +479,15 @@ const RoomGraphView = (function () {
 
     // -- free drag resize is native CSS `resize: both` on .rgv-window; we
     // just need to re-fit the canvas whenever the window's box changes --
-    const resizeObserver = new ResizeObserver(() => { if (explorer.resize) explorer.resize(); });
+    // also where an actual user resize gets persisted, skipping the
+    // transient minimized (collapsed) and maximized (viewport-filling)
+    // states so neither ever overwrites the real remembered size.
+    const resizeObserver = new ResizeObserver(() => {
+      if (explorer.resize) explorer.resize();
+      if (!win.classList.contains("rgv-window-minimized") && !win.classList.contains("rgv-window-maximized")) {
+        saveWindowSize(win.offsetWidth, win.offsetHeight);
+      }
+    });
     resizeObserver.observe(win);
 
     // -- close --
