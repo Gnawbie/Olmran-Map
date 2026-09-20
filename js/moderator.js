@@ -302,14 +302,42 @@
   }
 
   // ---- GitHub direct-commit (optional, accept-updated-map tab) ----
-  // Token lives only in this variable for the life of the tab -- never
-  // written to localStorage/sessionStorage, so a refresh or logout clears it.
+  // Token is remembered in localStorage for 30 days (per-device, not
+  // per-session) so it doesn't need re-entering every login. Whoever has
+  // access to this browser/device for that window can commit to the repo
+  // with it -- that's the accepted tradeoff for not re-pasting it each time.
   const GITHUB_OWNER = "Gnawbie", GITHUB_REPO = "Olmran-Map";
+  const GITHUB_TOKEN_STORAGE_KEY = "modGithubToken";
+  const GITHUB_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000;
   let githubToken = "";
   let githubBranchCache = null;
 
-  document.getElementById("github-token").addEventListener("input", e => {
+  function loadStoredGithubToken() {
+    try {
+      const raw = localStorage.getItem(GITHUB_TOKEN_STORAGE_KEY);
+      if (!raw) return "";
+      const parsed = JSON.parse(raw);
+      if (!parsed || !parsed.token || !parsed.savedAt) return "";
+      if (Date.now() - parsed.savedAt > GITHUB_TOKEN_TTL_MS) {
+        localStorage.removeItem(GITHUB_TOKEN_STORAGE_KEY);
+        return "";
+      }
+      return parsed.token;
+    } catch (e) { return ""; }
+  }
+  function saveStoredGithubToken(token) {
+    try {
+      if (token) localStorage.setItem(GITHUB_TOKEN_STORAGE_KEY, JSON.stringify({ token, savedAt: Date.now() }));
+      else localStorage.removeItem(GITHUB_TOKEN_STORAGE_KEY);
+    } catch (e) { /* storage unavailable/blocked -- token just won't persist */ }
+  }
+
+  githubToken = loadStoredGithubToken();
+  const githubTokenInput = document.getElementById("github-token");
+  if (githubToken) githubTokenInput.value = githubToken;
+  githubTokenInput.addEventListener("input", e => {
     githubToken = e.target.value.trim();
+    saveStoredGithubToken(githubToken);
   });
 
   function utf8ToBase64(str) {

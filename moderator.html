@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Olmran Map — Moderator Panel</title>
-<link rel="stylesheet" href="css/style.css?v=8">
-<link rel="stylesheet" href="css/moderator.css?v=8">
+<link rel="stylesheet" href="css/style.css?v=9">
+<link rel="stylesheet" href="css/moderator.css?v=9">
 </head>
 <body>
 
@@ -130,13 +130,13 @@
         <div id="github-token-box">
           <label for="github-token" class="mod-hint" style="margin:0 0 4px; display:block;">GitHub token (for direct commit — optional)</label>
           <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-            <input type="password" id="github-token" placeholder="github_pat_… (kept in memory only, cleared on reload)" autocomplete="off" style="flex:1; min-width:280px;">
+            <input type="password" id="github-token" placeholder="github_pat_… (remembered on this device for 30 days)" autocomplete="off" style="flex:1; min-width:280px;">
             <span id="github-token-status" class="mod-hint" style="margin:0;"></span>
           </div>
           <p class="mod-hint" style="margin-top:6px;">
             Needs a token scoped to just <code>Gnawbie/Olmran-Map</code> with Contents read/write —
             create one at <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener" class="mod-link">github.com/settings/personal-access-tokens/new</a>.
-            Never saved to disk; you'll re-enter it next time you log in.
+            Remembered on this browser/device for 30 days, then you'll need to re-enter it — don't use this on a shared or public computer.
           </p>
         </div>
         <div id="import-export-output" class="export-output"></div>
@@ -162,16 +162,16 @@
   </div>
 </div>
 
-<script src="js/data/mod-accounts.js?v=8"></script>
-<script src="js/data/layers.js?v=8"></script>
-<script src="js/data/zones.js?v=8"></script>
-<script src="js/data/markers.js?v=8"></script>
-<script src="js/data/realm-graph/chaos.js?v=8"></script>
-<script src="js/data/realm-graph/evil.js?v=8"></script>
-<script src="js/data/realm-graph/good.js?v=8"></script>
-<script src="js/data/realm-graph/kaid.js?v=8"></script>
-<script src="js/room-graph-view.js?v=8"></script>
-<script src="js/auth.js?v=8"></script>
-<script src="js/moderator.js?v=8"></script>
+<script src="js/data/mod-accounts.js?v=9"></script>
+<script src="js/data/layers.js?v=9"></script>
+<script src="js/data/zones.js?v=9"></script>
+<script src="js/data/markers.js?v=9"></script>
+<script src="js/data/realm-graph/chaos.js?v=9"></script>
+<script src="js/data/realm-graph/evil.js?v=9"></script>
+<script src="js/data/realm-graph/good.js?v=9"></script>
+<script src="js/data/realm-graph/kaid.js?v=9"></script>
+<script src="js/room-graph-view.js?v=9"></script>
+<script src="js/auth.js?v=9"></script>
+<script src="js/moderator.js?v=9"></script>
 </body>
 </html>
