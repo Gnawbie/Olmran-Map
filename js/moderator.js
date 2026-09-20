@@ -451,51 +451,63 @@
       return "";
     }
 
-    function commitButton(label, onClick) {
-      const btn = document.createElement("button");
-      btn.className = "mod-btn";
-      btn.textContent = label;
-      const status = document.createElement("span");
-      status.className = "mod-status";
-      btn.addEventListener("click", async () => {
-        btn.disabled = true;
-        status.className = "mod-status";
-        status.textContent = "Committing…";
-        try {
-          await onClick(status);
-        } catch (e) {
-          status.className = "mod-status err";
-          status.textContent = "Failed: " + e.message + commitErrorHint(e);
-        } finally {
-          btn.disabled = false;
+    // ---- one primary Apply action: commits every changed realm, then bumps cache version ----
+    const realmNames = changedRealms.map(r => r.label).join(", ");
+    const applyWrap = document.createElement("div");
+    applyWrap.className = "realm-apply-block apply-primary";
+    applyWrap.innerHTML =
+      `<h4>Apply to the live map</h4>` +
+      `<p class="mod-hint">Commits ${realmNames} straight to GitHub and bumps the cache version, in one step.</p>`;
+    const applyActions = document.createElement("div");
+    applyActions.className = "realm-apply-actions";
+    const applyBtn = document.createElement("button");
+    applyBtn.className = "mod-btn apply-btn";
+    applyBtn.textContent = changedRealms.length === 1 ? `Apply ${changedRealms[0].label} change` : `Apply all ${changedRealms.length} changes`;
+    const applyStatus = document.createElement("span");
+    applyStatus.className = "mod-status";
+    const applyResult = document.createElement("div");
+    applyResult.className = "apply-result";
+    applyBtn.addEventListener("click", async () => {
+      applyBtn.disabled = true;
+      applyResult.className = "apply-result";
+      applyResult.textContent = "";
+      try {
+        for (const r of changedRealms) {
+          applyStatus.textContent = `Committing ${r.label}…`;
+          await commitFileToGithub(`js/data/realm-graph/${r.key}.js`, formatRealmGraphFile(r, byRealmKey[r.key]), `Update room graph: ${r.label}`);
         }
-      });
-      return { btn, status };
-    }
+        applyStatus.textContent = "Bumping cache version…";
+        await bumpCacheVersionOnGithub();
+        applyStatus.textContent = "";
+        applyResult.className = "apply-result ok";
+        applyResult.innerHTML = `&check; Applied — ${escapeHtml(realmNames)} committed. GitHub Pages will rebuild in about a minute.`;
+      } catch (e) {
+        applyStatus.textContent = "";
+        applyResult.className = "apply-result err";
+        applyResult.textContent = "Failed: " + e.message + commitErrorHint(e);
+      } finally {
+        applyBtn.disabled = false;
+      }
+    });
+    applyActions.appendChild(applyBtn); applyActions.appendChild(applyStatus);
+    applyWrap.appendChild(applyActions);
+    applyWrap.appendChild(applyResult);
+    outputEl.appendChild(applyWrap);
 
+    // ---- per-realm manual fallback: no token, or prefer to handle it yourself ----
     changedRealms.forEach(r => {
       const path = `js/data/realm-graph/${r.key}.js`;
       const fileText = formatRealmGraphFile(r, byRealmKey[r.key]);
       const wrap = document.createElement("div");
-      wrap.className = "realm-apply-block";
+      wrap.className = "realm-apply-block secondary";
       wrap.innerHTML =
         `<h4>${r.label}</h4>` +
-        `<p class="mod-hint">Commits straight to <code>${path}</code> on GitHub, or download/copy it to paste over the file yourself.</p>`;
+        `<p class="mod-hint">Or do it yourself: save as <code>${path}</code>, overwriting the existing file.</p>`;
       const actions = document.createElement("div");
       actions.className = "realm-apply-actions";
-      const { btn: commitBtn, status: commitStatus } = commitButton(`Commit directly to GitHub`, async status => {
-        const result = await commitFileToGithub(path, fileText, `Update room graph: ${r.label}`);
-        status.textContent = "Bumping cache version…";
-        await bumpCacheVersionOnGithub();
-        status.className = "mod-status ok";
-        const sha = result && result.commit && result.commit.sha ? result.commit.sha.slice(0, 7) : "";
-        const url = result && result.commit && result.commit.html_url;
-        status.innerHTML = `Committed${sha ? " " + sha : ""} — Pages will rebuild in a minute.` +
-          (url ? ` <a href="${escapeHtml(url)}" target="_blank" rel="noopener" class="mod-link">View commit</a>` : "");
-      });
       const dlBtn = document.createElement("button");
       dlBtn.className = "mod-btn secondary";
-      dlBtn.textContent = `Download`;
+      dlBtn.textContent = "Download";
       dlBtn.addEventListener("click", () => downloadTextFile(`${r.key}.js`, fileText));
       const copyBtn = document.createElement("button");
       copyBtn.className = "mod-btn secondary";
@@ -503,38 +515,16 @@
       const copyStatus = document.createElement("span");
       copyStatus.className = "mod-status";
       copyBtn.addEventListener("click", () => copyToClipboard(fileText, copyStatus));
-      actions.appendChild(commitBtn); actions.appendChild(dlBtn); actions.appendChild(copyBtn);
-      actions.appendChild(commitStatus); actions.appendChild(copyStatus);
+      actions.appendChild(dlBtn); actions.appendChild(copyBtn); actions.appendChild(copyStatus);
       wrap.appendChild(actions);
       outputEl.appendChild(wrap);
     });
 
-    if (changedRealms.length > 1) {
-      const bulkWrap = document.createElement("div");
-      bulkWrap.className = "realm-apply-block";
-      bulkWrap.innerHTML = `<h4>Commit all ${changedRealms.length} changed file(s)</h4><p class="mod-hint">Same as the buttons above, done one file at a time.</p>`;
-      const bulkActions = document.createElement("div");
-      bulkActions.className = "realm-apply-actions";
-      const { btn: bulkBtn, status: bulkStatus } = commitButton("Commit all to GitHub", async status => {
-        for (const r of changedRealms) {
-          status.textContent = `Committing ${r.label}…`;
-          await commitFileToGithub(`js/data/realm-graph/${r.key}.js`, formatRealmGraphFile(r, byRealmKey[r.key]), `Update room graph: ${r.label}`);
-        }
-        status.textContent = "Bumping cache version…";
-        await bumpCacheVersionOnGithub();
-        status.className = "mod-status ok";
-        status.textContent = `All ${changedRealms.length} file(s) committed — Pages will rebuild shortly.`;
-      });
-      bulkActions.appendChild(bulkBtn); bulkActions.appendChild(bulkStatus);
-      bulkWrap.appendChild(bulkActions);
-      outputEl.appendChild(bulkWrap);
-    }
-
     const gitWrap = document.createElement("div");
-    gitWrap.className = "realm-apply-block";
+    gitWrap.className = "realm-apply-block secondary";
     const gitPaths = changedRealms.map(r => `js/data/realm-graph/${r.key}.js`).join(" ");
     const gitCmd = `git add ${gitPaths}\ngit commit -m "Update room graph: ${changedRealms.map(r => r.label).join(", ")}"\ngit push`;
-    gitWrap.innerHTML = `<h4>Or, from the repo folder</h4><p class="mod-hint">If you downloaded/copied instead of committing directly:</p>`;
+    gitWrap.innerHTML = `<h4>Or, from the repo folder</h4><p class="mod-hint">If you downloaded/copied instead of applying directly:</p>`;
     const pre = document.createElement("pre");
     pre.style.cssText = "font-size:12px; background:var(--panel-bg); border:1px solid var(--panel-border); border-radius:4px; padding:8px; white-space:pre-wrap; margin:0 0 8px;";
     pre.textContent = gitCmd;

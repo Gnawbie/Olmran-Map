@@ -107,6 +107,17 @@ textarea.mod-json { width: 100%; min-height: 160px; font-family: ui-monospace, C
 .realm-apply-block .mod-hint { margin: 4px 0 8px; }
 .realm-apply-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .realm-apply-actions .mod-status { font-size: 12px; color: var(--muted); }
+
+.realm-apply-block.apply-primary { border-color: var(--accent); background: rgba(90,169,230,0.08); }
+.realm-apply-block.apply-primary h4 { font-size: 15px; }
+.apply-btn { font-size: 14px; padding: 10px 18px; }
+.apply-result { font-size: 13px; margin-top: 8px; }
+.apply-result.ok { color: #5ec98a; }
+.apply-result.err { color: var(--danger); }
+
+.realm-apply-block.secondary { opacity: 0.7; }
+.realm-apply-block.secondary:hover { opacity: 1; }
+.realm-apply-block.secondary h4 { font-size: 12px; color: var(--muted); font-weight: 500; }
 .realm-apply-actions .mod-status.ok { color: #5ec98a; }
 .realm-apply-actions .mod-status.err { color: var(--danger); }
 .import-all-clear { color: var(--muted); font-size: 13px; padding: 4px 0; }
