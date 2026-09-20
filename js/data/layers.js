@@ -17,7 +17,7 @@ const MAP_LAYERS = [
   {
     id: "land-of-kaid",
     name: "Land of Kaid (Overworld)",
-    image: "maps/Land_of_Kaid_Fix.png",
+    image: "maps/Land_of_Kaid_Fix.png?v=1",
     width: 4766,
     height: 6632,
     colorImage: null,
