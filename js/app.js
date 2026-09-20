@@ -324,18 +324,26 @@
     return best <= tolerance ? 500 - best : -1;
   }
 
+  // Each area can now carry any number of flags (a plain area-level one,
+  // plus any linked to specific room-group(s) -- see Test Builder's
+  // area-flag.js), so every flag becomes its own jump target here, not just
+  // one per area. They all still resolve to the same area via areaId; only
+  // the name/x/y (and so the Items tree lookup, keyed by flag name) differ
+  // per flag. roomIds isn't used here yet -- a room-linked flag jumps to its
+  // own point exactly like an area-level one, just named differently.
   function buildFlagRealms() {
     const realms = [];
     MAP_LAYERS.forEach(l => {
       const areas = REALM_DATA_BY_LAYER[l.id] || [];
-      const flagged = areas.filter(a => a.flag);
-      if (flagged.length === 0) return;
-      const realmName = areas[0].realm || areas[0].name || l.name;
-      realms.push({
-        layerId: l.id,
-        realmName,
-        areas: flagged.map(a => ({ areaId: a.id, name: a.flag.name || a.name, x: a.flag.x, y: a.flag.y }))
+      const flagEntries = [];
+      areas.forEach(a => {
+        (a.flags || []).forEach(flag => {
+          flagEntries.push({ areaId: a.id, name: flag.name || a.name, x: flag.x, y: flag.y });
+        });
       });
+      if (flagEntries.length === 0) return;
+      const realmName = areas[0].realm || areas[0].name || l.name;
+      realms.push({ layerId: l.id, realmName, areas: flagEntries });
     });
     return realms;
   }
