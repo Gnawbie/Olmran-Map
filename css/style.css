@@ -34,7 +34,9 @@ html, body {
 #room-graph-root {
   width: 100%;
   height: 100%;
-  background: #14151a;
+  /* Hard two-tone split: the top 54px stays the original dark toolbar-backing
+     strip, everything below (the actual graph canvas) is the new color. */
+  background: linear-gradient(to bottom, #14151a 54px, #b98c93 54px);
   padding-top: 54px;
 }
 
@@ -431,6 +433,6 @@ html, body {
   font-size: 12px;
 }
 .rgv-btn:hover { border-color: var(--accent); }
-.rgv-canvas-wrap { flex: 1; min-height: 0; background: #21232a; }
+.rgv-canvas-wrap { flex: 1; min-height: 0; background: #b98c93; }
 .rgv-svg { display: block; cursor: grab; }
 .rgv-room-openable { cursor: pointer; }
