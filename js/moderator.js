@@ -30,6 +30,29 @@
   function newId(prefix) {
     return prefix + "_" + Math.random().toString(36).slice(2, 10);
   }
+  // Order-independent deep equality, used to tell "really changed" apart
+  // from "same data, different key order" when diffing an import.
+  function deepEqual(a, b) {
+    if (a === b) return true;
+    if (typeof a !== "object" || typeof b !== "object" || a === null || b === null) return false;
+    if (Array.isArray(a) !== Array.isArray(b)) return false;
+    if (Array.isArray(a)) {
+      if (a.length !== b.length) return false;
+      for (let i = 0; i < a.length; i++) if (!deepEqual(a[i], b[i])) return false;
+      return true;
+    }
+    const ka = Object.keys(a), kb = Object.keys(b);
+    if (ka.length !== kb.length) return false;
+    return ka.every(k => Object.prototype.hasOwnProperty.call(b, k) && deepEqual(a[k], b[k]));
+  }
+  function downloadTextFile(filename, text) {
+    const blob = new Blob([text], { type: "text/javascript" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
 
   // ---- login gate ----
   const loginGate = document.getElementById("login-gate");
@@ -62,7 +85,6 @@
   });
 
   const existingSession = Auth.loadSession();
-  if (existingSession) showLoggedIn(existingSession);
 
   // ---- tabs ----
   document.querySelectorAll(".mod-tab-btn").forEach(btn => {
@@ -279,6 +301,91 @@
     if (graphExplorer) graphExplorer.resize();
   }
 
+  // ---- GitHub direct-commit (optional, accept-updated-map tab) ----
+  // Token lives only in this variable for the life of the tab -- never
+  // written to localStorage/sessionStorage, so a refresh or logout clears it.
+  const GITHUB_OWNER = "Gnawbie", GITHUB_REPO = "Olmran-Map";
+  let githubToken = "";
+  let githubBranchCache = null;
+
+  document.getElementById("github-token").addEventListener("input", e => {
+    githubToken = e.target.value.trim();
+  });
+
+  function utf8ToBase64(str) {
+    const bytes = new TextEncoder().encode(str);
+    let binary = "";
+    bytes.forEach(b => { binary += String.fromCharCode(b); });
+    return btoa(binary);
+  }
+  function base64ToUtf8(b64) {
+    const binary = atob(b64.replace(/\n/g, ""));
+    const bytes = Uint8Array.from(binary, c => c.charCodeAt(0));
+    return new TextDecoder().decode(bytes);
+  }
+
+  async function githubApi(path, options) {
+    const opts = options || {};
+    const res = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}${path}`, {
+      ...opts,
+      headers: {
+        "Accept": "application/vnd.github+json",
+        "Authorization": `Bearer ${githubToken}`,
+        "X-GitHub-Api-Version": "2022-11-28",
+        ...(opts.headers || {})
+      }
+    });
+    let body = null;
+    try { body = await res.json(); } catch (e) { /* no/invalid JSON body */ }
+    if (!res.ok) {
+      const err = new Error((body && body.message) || `HTTP ${res.status}`);
+      err.status = res.status;
+      throw err;
+    }
+    return body;
+  }
+
+  async function githubDefaultBranch() {
+    if (githubBranchCache) return githubBranchCache;
+    const info = await githubApi("");
+    githubBranchCache = info.default_branch || "main";
+    return githubBranchCache;
+  }
+
+  async function commitFileToGithub(path, content, message) {
+    if (!githubToken) throw new Error("enter a GitHub token above first");
+    const branch = await githubDefaultBranch();
+    let sha;
+    try {
+      const existing = await githubApi(`/contents/${path}?ref=${encodeURIComponent(branch)}`);
+      sha = existing.sha;
+    } catch (e) {
+      if (e.status !== 404) throw e;
+    }
+    return githubApi(`/contents/${path}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message, content: utf8ToBase64(content), branch, ...(sha ? { sha } : {}) })
+    });
+  }
+
+  // Same convention as every manual push: bump index.html's ?v=N so
+  // browsers that already cached the old realm-graph JS actually refetch it.
+  async function bumpCacheVersionOnGithub() {
+    const branch = await githubDefaultBranch();
+    const file = await githubApi(`/contents/index.html?ref=${encodeURIComponent(branch)}`);
+    const html = base64ToUtf8(file.content);
+    const versions = [...html.matchAll(/\?v=(\d+)/g)].map(m => parseInt(m[1], 10));
+    if (versions.length === 0) return null;
+    const newV = Math.max(...versions) + 1;
+    const bumped = html.replace(/\?v=\d+/g, `?v=${newV}`);
+    return githubApi(`/contents/index.html`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: `Bump cache version to v${newV}`, content: utf8ToBase64(bumped), branch, sha: file.sha })
+    });
+  }
+
   // ---- accept updated map (import) tab ----
   let pendingImport = null; // { byRealmKey: { key -> Area[] } }
 
@@ -307,25 +414,142 @@
 
     pendingImport = { byRealmKey };
 
+    const roomCount = arr => arr.reduce((n, a) => n + (a.rooms || []).length + (a.miniAreas || []).reduce((m, ma) => m + (ma.rooms || []).length, 0), 0);
+    const changedRealms = [];
     const rows = REALMS.map(r => {
       const incoming = byRealmKey[r.key] || [];
       const current = r.getData();
-      const roomCount = arr => arr.reduce((n, a) => n + (a.rooms || []).length + (a.miniAreas || []).reduce((m, ma) => m + (ma.rooms || []).length, 0), 0);
-      return `<div class="realm-row"><strong>${r.label}:</strong> ${current.length} → ${incoming.length} area(s), ${roomCount(current)} → ${roomCount(incoming)} room(s)${incoming.length === 0 ? " <em>(unchanged — nothing in the import for this realm)</em>" : ""}</div>`;
+      if (incoming.length === 0) {
+        return `<div class="realm-row no-change"><strong>${r.label}:</strong> nothing in the import for this realm — left as-is.</div>`;
+      }
+      const changed = !deepEqual(current, incoming);
+      if (changed) changedRealms.push(r);
+      const noun = changed ? "" : " <em>(identical to what's already live — nothing to do)</em>";
+      return `<div class="realm-row${changed ? "" : " no-change"}"><strong>${r.label}:</strong> ${current.length} → ${incoming.length} area(s), ${roomCount(current)} → ${roomCount(incoming)} room(s)${noun}</div>`;
     }).join("");
     summaryEl.innerHTML = rows + (unassigned ? `<p style="color:var(--danger)">${unassigned} area(s) had no recognized realm and were skipped.</p>` : "");
 
-    REALMS.filter(r => (byRealmKey[r.key] || []).length > 0).forEach(r => {
-      const wrap = document.createElement("div");
-      const h = document.createElement("h4");
-      h.textContent = `js/data/realm-graph/${r.key}.js`;
+    if (changedRealms.length === 0) {
+      outputEl.innerHTML = `<p class="import-all-clear">Nothing to apply — every realm above already matches this import.</p>`;
+      return;
+    }
+
+    function commitErrorHint(e) {
+      const msg = (e.message || "").toLowerCase();
+      if (e.status === 401 || msg.includes("bad credentials")) {
+        return " — the token looks invalid or expired. Generate a new one.";
+      }
+      if (e.status === 403 || e.status === 404 || msg.includes("not accessible")) {
+        return " — check the token's Contents permission is \"Read and write\" and that this repo is included in its repository access.";
+      }
+      if (e.status === 409) {
+        return " — someone else changed this file since Preview Import ran. Re-run Preview Import and try again.";
+      }
+      if (e.status === 422 && (msg.includes("too large") || msg.includes("large"))) {
+        return " — this file is likely too big for direct commit. Use Download/Copy below instead.";
+      }
+      return "";
+    }
+
+    function commitButton(label, onClick) {
       const btn = document.createElement("button");
-      btn.className = "mod-btn secondary";
-      btn.textContent = `Copy updated ${r.key}.js`;
-      btn.addEventListener("click", function () { copyToClipboard(formatRealmGraphFile(r, byRealmKey[r.key]), this); });
-      wrap.appendChild(h); wrap.appendChild(btn);
+      btn.className = "mod-btn";
+      btn.textContent = label;
+      const status = document.createElement("span");
+      status.className = "mod-status";
+      btn.addEventListener("click", async () => {
+        btn.disabled = true;
+        status.className = "mod-status";
+        status.textContent = "Committing…";
+        try {
+          await onClick(status);
+        } catch (e) {
+          status.className = "mod-status err";
+          status.textContent = "Failed: " + e.message + commitErrorHint(e);
+        } finally {
+          btn.disabled = false;
+        }
+      });
+      return { btn, status };
+    }
+
+    changedRealms.forEach(r => {
+      const path = `js/data/realm-graph/${r.key}.js`;
+      const fileText = formatRealmGraphFile(r, byRealmKey[r.key]);
+      const wrap = document.createElement("div");
+      wrap.className = "realm-apply-block";
+      wrap.innerHTML =
+        `<h4>${r.label}</h4>` +
+        `<p class="mod-hint">Commits straight to <code>${path}</code> on GitHub, or download/copy it to paste over the file yourself.</p>`;
+      const actions = document.createElement("div");
+      actions.className = "realm-apply-actions";
+      const { btn: commitBtn, status: commitStatus } = commitButton(`Commit directly to GitHub`, async status => {
+        const result = await commitFileToGithub(path, fileText, `Update room graph: ${r.label}`);
+        status.textContent = "Bumping cache version…";
+        await bumpCacheVersionOnGithub();
+        status.className = "mod-status ok";
+        const sha = result && result.commit && result.commit.sha ? result.commit.sha.slice(0, 7) : "";
+        const url = result && result.commit && result.commit.html_url;
+        status.innerHTML = `Committed${sha ? " " + sha : ""} — Pages will rebuild in a minute.` +
+          (url ? ` <a href="${escapeHtml(url)}" target="_blank" rel="noopener" class="mod-link">View commit</a>` : "");
+      });
+      const dlBtn = document.createElement("button");
+      dlBtn.className = "mod-btn secondary";
+      dlBtn.textContent = `Download`;
+      dlBtn.addEventListener("click", () => downloadTextFile(`${r.key}.js`, fileText));
+      const copyBtn = document.createElement("button");
+      copyBtn.className = "mod-btn secondary";
+      copyBtn.textContent = "Copy instead";
+      const copyStatus = document.createElement("span");
+      copyStatus.className = "mod-status";
+      copyBtn.addEventListener("click", () => copyToClipboard(fileText, copyStatus));
+      actions.appendChild(commitBtn); actions.appendChild(dlBtn); actions.appendChild(copyBtn);
+      actions.appendChild(commitStatus); actions.appendChild(copyStatus);
+      wrap.appendChild(actions);
       outputEl.appendChild(wrap);
     });
+
+    if (changedRealms.length > 1) {
+      const bulkWrap = document.createElement("div");
+      bulkWrap.className = "realm-apply-block";
+      bulkWrap.innerHTML = `<h4>Commit all ${changedRealms.length} changed file(s)</h4><p class="mod-hint">Same as the buttons above, done one file at a time.</p>`;
+      const bulkActions = document.createElement("div");
+      bulkActions.className = "realm-apply-actions";
+      const { btn: bulkBtn, status: bulkStatus } = commitButton("Commit all to GitHub", async status => {
+        for (const r of changedRealms) {
+          status.textContent = `Committing ${r.label}…`;
+          await commitFileToGithub(`js/data/realm-graph/${r.key}.js`, formatRealmGraphFile(r, byRealmKey[r.key]), `Update room graph: ${r.label}`);
+        }
+        status.textContent = "Bumping cache version…";
+        await bumpCacheVersionOnGithub();
+        status.className = "mod-status ok";
+        status.textContent = `All ${changedRealms.length} file(s) committed — Pages will rebuild shortly.`;
+      });
+      bulkActions.appendChild(bulkBtn); bulkActions.appendChild(bulkStatus);
+      bulkWrap.appendChild(bulkActions);
+      outputEl.appendChild(bulkWrap);
+    }
+
+    const gitWrap = document.createElement("div");
+    gitWrap.className = "realm-apply-block";
+    const gitPaths = changedRealms.map(r => `js/data/realm-graph/${r.key}.js`).join(" ");
+    const gitCmd = `git add ${gitPaths}\ngit commit -m "Update room graph: ${changedRealms.map(r => r.label).join(", ")}"\ngit push`;
+    gitWrap.innerHTML = `<h4>Or, from the repo folder</h4><p class="mod-hint">If you downloaded/copied instead of committing directly:</p>`;
+    const pre = document.createElement("pre");
+    pre.style.cssText = "font-size:12px; background:var(--panel-bg); border:1px solid var(--panel-border); border-radius:4px; padding:8px; white-space:pre-wrap; margin:0 0 8px;";
+    pre.textContent = gitCmd;
+    const gitCopyBtn = document.createElement("button");
+    gitCopyBtn.className = "mod-btn secondary";
+    gitCopyBtn.textContent = "Copy commands";
+    const gitStatus = document.createElement("span");
+    gitStatus.className = "mod-status";
+    gitCopyBtn.addEventListener("click", () => copyToClipboard(gitCmd, gitStatus));
+    gitWrap.appendChild(pre);
+    const gitActions = document.createElement("div");
+    gitActions.className = "realm-apply-actions";
+    gitActions.appendChild(gitCopyBtn); gitActions.appendChild(gitStatus);
+    gitWrap.appendChild(gitActions);
+    outputEl.appendChild(gitWrap);
   }
 
   document.getElementById("import-preview-btn").addEventListener("click", runImportPreview);
@@ -388,4 +612,10 @@
   document.getElementById("copy-accounts-btn").addEventListener("click", function () {
     copyToClipboard(Auth.formatAccountsFile(MOD_ACCOUNTS), this);
   });
+
+  // Restoring a session on load must run last: showLoggedIn() -> initOnce()
+  // touches every tab's render functions, which close over consts (REALMS,
+  // MARKERS, ZONES, ...) declared throughout this file — calling it any
+  // earlier would hit those before their declarations run.
+  if (existingSession) showLoggedIn(existingSession);
 })();

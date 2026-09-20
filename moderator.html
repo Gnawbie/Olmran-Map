@@ -103,22 +103,45 @@
   </div>
 
   <div id="tab-import" class="mod-tab-panel">
-    <p style="color: var(--muted); font-size: 12px; max-width: 640px;">
-      Paste the JSON from Test Builder's "Copy ALL Areas (JSON)" button below. This only
-      replaces the room-graph data (<code>js/data/realm-graph/&lt;realm&gt;.js</code>) — your
-      markers and zones are never touched by this.
+    <p style="color: var(--muted); font-size: 12px; max-width: 640px; margin-bottom: 16px;">
+      This only replaces room-graph data (<code>js/data/realm-graph/&lt;realm&gt;.js</code>) —
+      your markers and zones are never touched by this.
     </p>
-    <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
-      <label for="import-json-file" class="mod-btn secondary" style="cursor:pointer; display:inline-block;">Upload JSON File…</label>
-      <input type="file" id="import-json-file" accept=".json,.txt,application/json" hidden>
-      <span id="import-json-filename" style="color: var(--muted); font-size: 12px;"></span>
-    </div>
-    <textarea id="import-json" class="mod-json" placeholder="Paste exported JSON here… (or upload a file above)"></textarea>
-    <div>
-      <button id="import-preview-btn" class="mod-btn">Preview Import</button>
-    </div>
-    <div id="import-summary"></div>
-    <div id="import-export-output" class="export-output"></div>
+    <ol class="mod-import-steps">
+      <li>
+        <h3>Get the export from Test Builder</h3>
+        <p class="mod-hint">Use Test Builder's "Copy ALL Areas (JSON)" button, then upload the saved file or paste it below.</p>
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+          <label for="import-json-file" class="mod-btn secondary" style="cursor:pointer; display:inline-block;">Upload JSON File…</label>
+          <input type="file" id="import-json-file" accept=".json,.txt,application/json" hidden>
+          <span id="import-json-filename" style="color: var(--muted); font-size: 12px;"></span>
+        </div>
+        <textarea id="import-json" class="mod-json" placeholder="…or paste exported JSON here"></textarea>
+      </li>
+      <li>
+        <h3>Preview what will change</h3>
+        <p class="mod-hint">Only reads the data above — nothing is written until you download a file in step 3.</p>
+        <button id="import-preview-btn" class="mod-btn">Preview Import</button>
+        <div id="import-summary"></div>
+      </li>
+      <li>
+        <h3>Apply the changes</h3>
+        <p class="mod-hint">Only realms with real changes are listed below. Either commit each one straight to GitHub, or download/copy the file and paste it over the existing one yourself.</p>
+        <div id="github-token-box">
+          <label for="github-token" class="mod-hint" style="margin:0 0 4px; display:block;">GitHub token (for direct commit — optional)</label>
+          <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+            <input type="password" id="github-token" placeholder="github_pat_… (kept in memory only, cleared on reload)" autocomplete="off" style="flex:1; min-width:280px;">
+            <span id="github-token-status" class="mod-hint" style="margin:0;"></span>
+          </div>
+          <p class="mod-hint" style="margin-top:6px;">
+            Needs a token scoped to just <code>Gnawbie/Olmran-Map</code> with Contents read/write —
+            create one at <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener" class="mod-link">github.com/settings/personal-access-tokens/new</a>.
+            Never saved to disk; you'll re-enter it next time you log in.
+          </p>
+        </div>
+        <div id="import-export-output" class="export-output"></div>
+      </li>
+    </ol>
   </div>
 
   <div id="tab-accounts" class="mod-tab-panel">

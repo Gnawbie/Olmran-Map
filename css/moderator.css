@@ -81,6 +81,40 @@ textarea.mod-json { width: 100%; min-height: 160px; font-family: ui-monospace, C
 
 #import-summary { margin: 12px 0; font-size: 13px; }
 #import-summary .realm-row { padding: 6px 0; border-bottom: 1px solid var(--panel-border); }
+#import-summary .realm-row.no-change { color: var(--muted); }
 
 .export-output { margin-top: 10px; }
 .export-output h4 { font-size: 12px; color: var(--muted); margin: 10px 0 4px; }
+
+.mod-import-steps { list-style: none; margin: 0; padding: 0; max-width: 640px; counter-reset: mod-step; }
+.mod-import-steps > li {
+  counter-increment: mod-step; position: relative; padding: 0 0 22px 34px;
+  border-left: 1px solid var(--panel-border); margin-left: 12px;
+}
+.mod-import-steps > li:last-child { border-left-color: transparent; padding-bottom: 0; }
+.mod-import-steps > li::before {
+  content: counter(mod-step); position: absolute; left: -12px; top: 0;
+  width: 24px; height: 24px; border-radius: 50%; background: var(--panel-bg);
+  border: 1px solid var(--accent); color: var(--accent); font-size: 12px; font-weight: 600;
+  display: flex; align-items: center; justify-content: center;
+}
+.mod-import-steps h3 { font-size: 14px; margin: 0 0 4px; }
+.mod-import-steps .mod-hint { color: var(--muted); font-size: 12px; margin: 0 0 10px; }
+
+.realm-apply-block { border: 1px solid var(--panel-border); border-radius: 6px; padding: 10px 12px; margin-bottom: 10px; }
+.realm-apply-block h4 { font-size: 13px; margin: 0 0 4px; color: var(--text); }
+.realm-apply-block code { font-size: 12px; }
+.realm-apply-block .mod-hint { margin: 4px 0 8px; }
+.realm-apply-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.realm-apply-actions .mod-status { font-size: 12px; color: var(--muted); }
+.realm-apply-actions .mod-status.ok { color: #5ec98a; }
+.realm-apply-actions .mod-status.err { color: var(--danger); }
+.import-all-clear { color: var(--muted); font-size: 13px; padding: 4px 0; }
+
+#github-token-box {
+  border: 1px solid var(--panel-border); border-radius: 6px; padding: 10px 12px;
+  margin-bottom: 12px; max-width: 640px;
+}
+#github-token { padding: 7px 9px; background: var(--panel-bg); border: 1px solid var(--panel-border); color: var(--text); border-radius: 4px; font-size: 13px; }
+#github-token-status.ok { color: #5ec98a; }
+#github-token-status.err { color: var(--danger); }
