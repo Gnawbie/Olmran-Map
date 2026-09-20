@@ -228,6 +228,22 @@ const RoomGraphView = (function () {
     }
 
     let dragging = false, moved = 0, start = { x: 0, y: 0 }, viewStart = { x: 0, y: 0 }, downTarget = null;
+    // Armed by setPlacing() (see js/app.js's user-flag "Create Flag" button)
+    // -- the next genuine click (not a pan-drag) on the canvas calls this
+    // with the clicked room-graph-space point, then immediately disarms
+    // itself. Panning while armed does NOT cancel it, only Escape or a
+    // completed placement does.
+    let placing = null;
+
+    function cancelPlacing() {
+      if (!placing) return;
+      placing = null;
+      svg.classList.remove("rgv-placing");
+    }
+    function setPlacing(cb) {
+      placing = cb;
+      svg.classList.add("rgv-placing");
+    }
 
     svg.addEventListener("pointerdown", e => {
       dragging = true; moved = 0;
@@ -246,6 +262,16 @@ const RoomGraphView = (function () {
     });
     svg.addEventListener("pointerup", e => {
       dragging = false;
+      if (moved < 4 && placing) {
+        const rect = svg.getBoundingClientRect();
+        const sx = e.clientX - rect.left, sy = e.clientY - rect.top;
+        const cb = placing;
+        placing = null;
+        svg.classList.remove("rgv-placing");
+        cb({ x: (sx - view.x) / view.scale, y: (sy - view.y) / view.scale });
+        downTarget = null;
+        return;
+      }
       if (moved < 4 && downTarget) {
         const roomId = downTarget.getAttribute("data-room-id");
         const room = (node.rooms || []).find(r => r.id === roomId);
@@ -281,7 +307,10 @@ const RoomGraphView = (function () {
     }
 
     fit();
-    return { fit, zoomBy: f => { view.scale = Math.max(0.02, Math.min(6, view.scale * f)); apply(); }, centerOn };
+    return {
+      fit, zoomBy: f => { view.scale = Math.max(0.02, Math.min(6, view.scale * f)); apply(); }, centerOn,
+      setPlacing, cancelPlacing
+    };
   }
 
   // Builds a lookup index for one realm's exported Area array: Area-by-id
@@ -384,7 +413,12 @@ const RoomGraphView = (function () {
         draw();
       },
       resize() { if (interaction) interaction.fit(); },
-      centerOn(x, y, scale) { if (interaction) interaction.centerOn(x, y, scale); }
+      centerOn(x, y, scale) { if (interaction) interaction.centerOn(x, y, scale); },
+      // One-shot: cb fires with the next clicked room-graph-space point,
+      // then this auto-disarms. Re-showing a different node (area switch)
+      // silently drops an armed-but-unused placement.
+      startPlacing(cb) { if (interaction) interaction.setPlacing(cb); },
+      cancelPlacing() { if (interaction) interaction.cancelPlacing(); }
     };
   }
 

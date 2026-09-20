@@ -32,6 +32,17 @@
   let currentLayerId = MAP_LAYERS[0].id;
   let imageLayer = null;
   let colorLayer = null;
+  // The main WIP canvas's live explorer + which top-level Area it's
+  // currently showing -- used by the user-flag "Create Flag" feature
+  // (below) to know where to arm click-to-place and what to save. Reset
+  // (armed placement dropped) on every switchLayer() call, since that
+  // always replaces the explorer/area being shown.
+  let currentExplorer = null;
+  let currentWipAreaId = null;
+  // Reassigned once the user-flags feature (below) is wired up -- lets
+  // switchLayer() reset that feature's "armed" button UI without needing
+  // to be declared after it in the file.
+  let onLayerSwitchResetFlagPlacement = () => {};
   let markerLayerGroup = L.layerGroup();
   const mapEl = document.getElementById("map");
   const roomGraphRoot = document.getElementById("room-graph-root");
@@ -93,6 +104,7 @@
   function switchLayer(layerId, opts) {
     opts = opts || {};
     const toggle = document.getElementById("color-layer-toggle");
+    onLayerSwitchResetFlagPlacement(layerId);
 
     if (isWipLayerId(layerId)) {
       const baseId = baseLayerIdFor(layerId);
@@ -107,7 +119,11 @@
       const explorer = RoomGraphView.createExplorer(roomGraphRoot, idx);
       explorer.show(targetArea, targetArea.name);
       if (opts.focus) explorer.centerOn(opts.focus.x, opts.focus.y, opts.focus.scale);
+      currentExplorer = explorer;
+      currentWipAreaId = targetArea.id;
     } else {
+      currentExplorer = null;
+      currentWipAreaId = null;
       const layer = layerById.get(layerId);
       if (!layer) return;
       currentLayerId = layerId;
@@ -360,8 +376,47 @@
   flagNavToggleBtn.addEventListener("click", () => {
     const collapsed = flagNavPanel.classList.toggle("collapsed");
     flagNavToggleBtn.textContent = collapsed ? "‹" : "›";
-    flagNavToggleBtn.title = collapsed ? "Show the jump-to-area panel" : "Hide the jump-to-area panel";
+    flagNavToggleBtn.title = collapsed ? "Show the Options panel" : "Hide the Options panel";
   });
+
+  // ---- tear off / redock the Options panel into a free-floating window ----
+  const flagNavTearoffBtn = document.getElementById("flag-nav-tearoff-btn");
+  const flagNavHeader = document.getElementById("flag-nav-header");
+  flagNavTearoffBtn.addEventListener("click", () => {
+    const floating = flagNavPanel.classList.toggle("floating");
+    if (floating) {
+      const rect = flagNavPanel.getBoundingClientRect();
+      flagNavPanel.style.left = rect.left + "px";
+      flagNavPanel.style.top = rect.top + "px";
+      flagNavPanel.style.right = "auto";
+      flagNavPanel.style.position = "fixed";
+      flagNavTearoffBtn.textContent = "⇲";
+      flagNavTearoffBtn.title = "Dock back to the sidebar";
+    } else {
+      flagNavPanel.style.left = "";
+      flagNavPanel.style.top = "";
+      flagNavPanel.style.right = "";
+      flagNavPanel.style.position = "";
+      flagNavTearoffBtn.textContent = "⇱";
+      flagNavTearoffBtn.title = "Pop out into a floating window";
+    }
+  });
+  // Drag-to-move by the header, only while floating -- docked, the panel
+  // stays anchored top-right (its normal CSS position) and isn't draggable.
+  let flagNavDragging = false, flagNavDragStart = null, flagNavPosStart = null;
+  flagNavHeader.addEventListener("pointerdown", e => {
+    if (!flagNavPanel.classList.contains("floating") || e.target.closest("button")) return;
+    flagNavDragging = true;
+    flagNavDragStart = { x: e.clientX, y: e.clientY };
+    flagNavPosStart = { left: flagNavPanel.offsetLeft, top: flagNavPanel.offsetTop };
+    flagNavHeader.setPointerCapture(e.pointerId);
+  });
+  flagNavHeader.addEventListener("pointermove", e => {
+    if (!flagNavDragging) return;
+    flagNavPanel.style.left = Math.max(0, flagNavPosStart.left + (e.clientX - flagNavDragStart.x)) + "px";
+    flagNavPanel.style.top = Math.max(0, flagNavPosStart.top + (e.clientY - flagNavDragStart.y)) + "px";
+  });
+  flagNavHeader.addEventListener("pointerup", () => { flagNavDragging = false; });
 
   function renderFlagResults(container, query, items, labelOf, onPick) {
     container.innerHTML = "";
@@ -408,7 +463,8 @@
   const flagNavTabs = document.querySelectorAll(".flag-nav-tab");
   const flagNavTabPanels = {
     jump: document.getElementById("flag-nav-tab-jump"),
-    items: document.getElementById("flag-nav-tab-items")
+    items: document.getElementById("flag-nav-tab-items"),
+    myflags: document.getElementById("flag-nav-tab-myflags")
   };
   flagNavTabs.forEach(tab => {
     tab.addEventListener("click", () => {
@@ -481,6 +537,122 @@
       flagAreaResults.classList.remove("open");
     }
   });
+
+  // ---- My Flags tab: personal, localStorage-only zoom-to-point bookmarks ----
+  // Anyone viewing the public map can drop these on any WIP room-graph
+  // layer -- never sent anywhere, never seen by anyone else, just a
+  // per-browser convenience. Distinct from the moderator/Test-Builder-
+  // authored flags (Jump tab), which are baked into the exported data.
+  const USER_FLAGS_KEY = "userMapFlags";
+  const userFlagCreateBtn = document.getElementById("user-flag-create-btn");
+  const userFlagsBody = document.getElementById("user-flags-body");
+  let userFlagPlacementArmed = false;
+
+  function loadUserFlags() {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(USER_FLAGS_KEY));
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (e) { return []; }
+  }
+  function saveUserFlags(flags) {
+    try { localStorage.setItem(USER_FLAGS_KEY, JSON.stringify(flags)); }
+    catch (e) { /* storage unavailable -- flags just won't persist */ }
+  }
+
+  function setCreateBtnArmed(armed) {
+    userFlagPlacementArmed = armed;
+    userFlagCreateBtn.classList.toggle("armed", armed);
+    userFlagCreateBtn.textContent = armed ? "Click the map… (Esc to cancel)" : "Create Flag";
+  }
+  // switchLayer() calls this on every layer change (see its top) with the
+  // layer it's switching TO -- drops any armed-but-unused placement (the
+  // explorer it was armed on no longer exists) and only allows creating a
+  // flag on a room-graph (WIP) layer, since that's the only coordinate
+  // space these points live in.
+  onLayerSwitchResetFlagPlacement = newLayerId => {
+    setCreateBtnArmed(false);
+    userFlagCreateBtn.disabled = !isWipLayerId(newLayerId);
+  };
+  userFlagCreateBtn.disabled = !isWipLayerId(currentLayerId);
+
+  function renderUserFlagsList() {
+    const flags = loadUserFlags();
+    userFlagsBody.innerHTML = "";
+    if (flags.length === 0) {
+      userFlagsBody.innerHTML = '<div class="muted">None yet.</div>';
+      return;
+    }
+    flags.forEach(flag => {
+      const row = document.createElement("div");
+      row.className = "user-flag-row";
+
+      const nameInput = document.createElement("input");
+      nameInput.type = "text";
+      nameInput.value = flag.name;
+      nameInput.title = "Rename";
+      nameInput.addEventListener("input", () => {
+        flag.name = nameInput.value;
+        saveUserFlags(flags);
+      });
+      row.appendChild(nameInput);
+
+      const jumpBtn = document.createElement("button");
+      jumpBtn.type = "button";
+      jumpBtn.textContent = "Jump";
+      jumpBtn.addEventListener("click", () => {
+        switchLayer(flag.layerId, { areaId: flag.areaId, focus: { x: flag.x, y: flag.y, scale: 1.2 } });
+      });
+      row.appendChild(jumpBtn);
+
+      const delBtn = document.createElement("button");
+      delBtn.type = "button";
+      delBtn.className = "user-flag-delete";
+      delBtn.textContent = "✕";
+      delBtn.title = "Delete";
+      delBtn.addEventListener("click", () => {
+        saveUserFlags(flags.filter(f => f.id !== flag.id));
+        renderUserFlagsList();
+      });
+      row.appendChild(delBtn);
+
+      userFlagsBody.appendChild(row);
+    });
+  }
+
+  userFlagCreateBtn.addEventListener("click", () => {
+    if (userFlagPlacementArmed) {
+      if (currentExplorer) currentExplorer.cancelPlacing();
+      setCreateBtnArmed(false);
+      return;
+    }
+    if (!currentExplorer || !isWipLayerId(currentLayerId)) return;
+    setCreateBtnArmed(true);
+    currentExplorer.startPlacing(pt => {
+      const flags = loadUserFlags();
+      const idx = realmIndexFor(baseLayerIdFor(currentLayerId));
+      const area = idx.areasById.get(currentWipAreaId);
+      flags.push({
+        id: "uflag_" + Math.random().toString(36).slice(2, 10),
+        name: `Flag ${flags.length + 1}` + (area ? ` (${area.name})` : ""),
+        layerId: currentLayerId,
+        areaId: currentWipAreaId,
+        x: Math.round(pt.x),
+        y: Math.round(pt.y)
+      });
+      saveUserFlags(flags);
+      renderUserFlagsList();
+      setCreateBtnArmed(false);
+    });
+  });
+
+  document.addEventListener("keydown", e => {
+    if (e.key === "Escape" && userFlagPlacementArmed) {
+      if (currentExplorer) currentExplorer.cancelPlacing();
+      setCreateBtnArmed(false);
+    }
+  });
+
+  renderUserFlagsList();
 
   switchLayer(currentLayerId);
 })();

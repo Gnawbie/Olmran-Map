@@ -231,6 +231,7 @@ html, body {
   font-weight: 600;
   font-size: 13px;
 }
+.flag-nav-header-btns { display: flex; align-items: center; gap: 4px; }
 #flag-nav-header button {
   background: none;
   border: none;
@@ -242,6 +243,15 @@ html, body {
 }
 #flag-nav.collapsed { width: auto; }
 #flag-nav.collapsed #flag-nav-body { display: none; }
+/* Torn off into a floating window: JS switches position to fixed with its
+   own left/top (see app.js), this just adds the drag affordance + a
+   stronger shadow so it visually reads as "detached" from the sidebar. */
+#flag-nav.floating {
+  box-shadow: 0 8px 24px rgba(0,0,0,0.45);
+}
+#flag-nav.floating #flag-nav-header {
+  cursor: move;
+}
 #flag-nav-body {
   padding: 0 12px 12px;
   display: flex;
@@ -351,6 +361,52 @@ html, body {
 }
 .flag-nav-monster-list li { padding: 2px 0; }
 
+.user-flags-hint { font-size: 11px; margin: 0; }
+#user-flag-create-btn {
+  width: 100%;
+  padding: 8px 10px;
+  font-size: 13px;
+  font-weight: 600;
+  background: var(--accent);
+  color: #10131a;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+#user-flag-create-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+#user-flag-create-btn.armed { background: var(--danger); color: #fff; }
+#user-flags-body { display: flex; flex-direction: column; gap: 6px; }
+.user-flag-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+}
+.user-flag-row input {
+  flex: 1;
+  min-width: 0;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--panel-border);
+  border-radius: 4px;
+  padding: 4px 6px;
+  font-size: 12px;
+}
+.user-flag-row button {
+  flex: none;
+  font-size: 11px;
+  padding: 3px 7px;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  color: var(--text);
+  border-radius: 4px;
+  cursor: pointer;
+}
+.user-flag-row button:hover { border-color: var(--accent); }
+.user-flag-row .user-flag-delete:hover { border-color: var(--danger); color: var(--danger); }
+
 /* ---- floating Mini-Area windows (shared: Mini-Area viewer) ---- */
 .rgv-windows-layer {
   position: fixed;
@@ -435,4 +491,5 @@ html, body {
 .rgv-btn:hover { border-color: var(--accent); }
 .rgv-canvas-wrap { flex: 1; min-height: 0; background: #b98c93; }
 .rgv-svg { display: block; cursor: grab; }
+.rgv-svg.rgv-placing { cursor: crosshair; }
 .rgv-room-openable { cursor: pointer; }

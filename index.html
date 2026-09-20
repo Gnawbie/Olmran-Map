@@ -6,7 +6,7 @@
 <title>Land of Olmran — Interactive Map</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
   integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
-<link rel="stylesheet" href="css/style.css?v=13">
+<link rel="stylesheet" href="css/style.css?v=14">
 </head>
 <body>
 <div id="app">
@@ -36,13 +36,17 @@
 
   <div id="flag-nav" class="panel">
     <div id="flag-nav-header">
-      <span>Jump to Area</span>
-      <button id="flag-nav-toggle-btn" title="Hide the jump-to-area panel">›</button>
+      <span>Options</span>
+      <div class="flag-nav-header-btns">
+        <button id="flag-nav-tearoff-btn" title="Pop out into a floating window">⇱</button>
+        <button id="flag-nav-toggle-btn" title="Hide the Options panel">›</button>
+      </div>
     </div>
     <div id="flag-nav-body">
       <div class="flag-nav-tabs">
         <button class="flag-nav-tab active" data-tab="jump" type="button">Jump</button>
         <button class="flag-nav-tab" data-tab="items" type="button">Items</button>
+        <button class="flag-nav-tab" data-tab="myflags" type="button">My Flags</button>
       </div>
       <div id="flag-nav-tab-jump" class="flag-nav-tab-panel">
         <div class="flag-nav-field">
@@ -66,22 +70,29 @@
           <div class="muted">Pick an area (Jump tab) to see its items.</div>
         </div>
       </div>
+      <div id="flag-nav-tab-myflags" class="flag-nav-tab-panel hidden">
+        <p class="muted user-flags-hint">Your own personal zoom-to-point bookmarks, saved on this browser/device only. Switch to a room-graph (WIP) layer first.</p>
+        <button id="user-flag-create-btn" type="button">Create Flag</button>
+        <div id="user-flags-body">
+          <div class="muted">None yet.</div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
   integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-<script src="js/data/layers.js?v=13"></script>
-<script src="js/data/zones.js?v=13"></script>
-<script src="js/data/markers.js?v=13"></script>
-<script src="js/data/zone-items.js?v=13"></script>
-<script src="js/data/area-items.js?v=13"></script>
-<script src="js/data/realm-graph/chaos.js?v=13"></script>
-<script src="js/data/realm-graph/evil.js?v=13"></script>
-<script src="js/data/realm-graph/good.js?v=13"></script>
-<script src="js/data/realm-graph/kaid.js?v=13"></script>
-<script src="js/room-graph-view.js?v=13"></script>
-<script src="js/app.js?v=13"></script>
+<script src="js/data/layers.js?v=14"></script>
+<script src="js/data/zones.js?v=14"></script>
+<script src="js/data/markers.js?v=14"></script>
+<script src="js/data/zone-items.js?v=14"></script>
+<script src="js/data/area-items.js?v=14"></script>
+<script src="js/data/realm-graph/chaos.js?v=14"></script>
+<script src="js/data/realm-graph/evil.js?v=14"></script>
+<script src="js/data/realm-graph/good.js?v=14"></script>
+<script src="js/data/realm-graph/kaid.js?v=14"></script>
+<script src="js/room-graph-view.js?v=14"></script>
+<script src="js/app.js?v=14"></script>
 </body>
 </html>
