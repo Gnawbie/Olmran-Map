@@ -261,11 +261,41 @@ const RoomGraphView = (function () {
       svg.classList.add("rgv-placing");
     }
 
+    // Click-to-highlight: plain click on a (non-connector) room highlights
+    // every room sharing a flag-group (roomIds) with it -- same glow as the
+    // Options Jump tab, just triggered from the canvas instead of a
+    // dropdown. Shift-click adds to a running set of clicked rooms instead
+    // of replacing it, highlighting the union of every matching flag-group
+    // across all of them. A room that doesn't belong to any flag group
+    // still highlights itself alone, so a click always visibly does
+    // something. Clicking empty canvas clears it.
+    let clickedRoomIds = new Set();
+    function applyClickHighlight() {
+      const idSet = new Set();
+      (node.flags || []).forEach(f => {
+        if (f.roomIds && f.roomIds.some(id => clickedRoomIds.has(id))) {
+          f.roomIds.forEach(id => idSet.add(id));
+        }
+      });
+      if (idSet.size === 0) clickedRoomIds.forEach(id => idSet.add(id));
+      svg.querySelectorAll(".rgv-room").forEach(roomEl => {
+        roomEl.classList.toggle("rgv-room-highlighted", idSet.has(roomEl.getAttribute("data-room-id")));
+      });
+    }
+    function clearClickHighlight() {
+      clickedRoomIds = new Set();
+      svg.querySelectorAll(".rgv-room-highlighted").forEach(roomEl => roomEl.classList.remove("rgv-room-highlighted"));
+    }
+
+    // Captured at gesture start (not re-read at pointerup) so releasing
+    // Ctrl mid-drag doesn't change how the gesture gets interpreted.
+    let ctrlHeld = false;
     svg.addEventListener("pointerdown", e => {
       dragging = true; moved = 0;
       start = { x: e.clientX, y: e.clientY };
       viewStart = { x: view.x, y: view.y };
       downTarget = e.target.closest(".rgv-room");
+      ctrlHeld = e.ctrlKey;
       svg.setPointerCapture(e.pointerId);
     });
     svg.addEventListener("pointermove", e => {
@@ -291,9 +321,20 @@ const RoomGraphView = (function () {
       if (moved < 4 && downTarget) {
         const roomId = downTarget.getAttribute("data-room-id");
         const room = (node.rooms || []).find(r => r.id === roomId);
-        if (room && room.connector && room.connector.targetMiniAreaId && onOpenMiniArea) {
+        // Shift-held always means "select for highlighting", even on a
+        // connector room -- never opens its Mini-Area window mid-multi-select.
+        if (!e.shiftKey && room && room.connector && room.connector.targetMiniAreaId && onOpenMiniArea) {
           onOpenMiniArea(room.connector.targetMiniAreaId);
+        } else if (room && !ctrlHeld) {
+          // Ctrl held (Ctrl-drag, or even a near-zero-movement Ctrl-click)
+          // means "just pan/nudge the view" -- never touches whatever's
+          // currently highlighted.
+          if (e.shiftKey) clickedRoomIds.add(roomId);
+          else clickedRoomIds = new Set([roomId]);
+          applyClickHighlight();
         }
+      } else if (moved < 4 && !downTarget && !ctrlHeld) {
+        clearClickHighlight();
       }
       downTarget = null;
     });
