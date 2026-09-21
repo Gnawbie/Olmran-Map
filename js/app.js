@@ -119,6 +119,17 @@
       const explorer = RoomGraphView.createExplorer(roomGraphRoot, idx);
       explorer.show(targetArea, targetArea.name);
       if (opts.focus) explorer.centerOn(opts.focus.x, opts.focus.y, opts.focus.scale);
+      // Only highlight when the caller actually asked for it (Jump tab) --
+      // a plain layer-dropdown switch or search-to-jump passes no
+      // highlightRoomIds key at all, so nothing glows. A falsy/empty value
+      // (an area-level flag, or the always-listed fallback area entry with
+      // no flag yet) means "the whole area" rather than "nothing".
+      if ("highlightRoomIds" in opts) {
+        const ids = (opts.highlightRoomIds && opts.highlightRoomIds.length > 0)
+          ? opts.highlightRoomIds
+          : (targetArea.rooms || []).map(r => r.id);
+        explorer.highlightRooms(ids);
+      }
       currentExplorer = explorer;
       currentWipAreaId = targetArea.id;
     } else {
@@ -344,9 +355,13 @@
   // plus any linked to specific room-group(s) -- see Test Builder's
   // area-flag.js), so every flag becomes its own jump target here, not just
   // one per area. They all still resolve to the same area via areaId; only
-  // the name/x/y (and so the Items tree lookup, keyed by flag name) differ
-  // per flag. roomIds isn't used here yet -- a room-linked flag jumps to its
-  // own point exactly like an area-level one, just named differently.
+  // the name/zoom point/roomIds differ per flag. Only type: "Area" flags
+  // are listed -- future flag types ("do different things", per the
+  // author) aren't "zoom to area" targets and don't belong in this tab.
+  // Uses each flag's zoomX/zoomY/zoomScale (the pan/zoom view captured at
+  // placement/last "Set Zoom to Current View"), not its x/y (just the
+  // marker's own drawn position, which can be dragged anywhere and often
+  // doesn't match a useful viewing point).
   function buildFlagRealms() {
     const realms = [];
     MAP_LAYERS.forEach(l => {
@@ -358,7 +373,17 @@
       const flagEntries = [];
       areas.forEach(a => {
         (a.flags || []).forEach(flag => {
-          flagEntries.push({ areaId: a.id, name: flag.name || a.name, x: flag.x, y: flag.y });
+          if ((flag.type || "Area") !== "Area") return;
+          // Defensive fallback to x/y/1.2 for any flag exported before
+          // zoomX/zoomY/zoomScale existed (e.g. an already-open Test
+          // Builder tab that hasn't reloaded the newer code yet).
+          flagEntries.push({
+            areaId: a.id, name: flag.name || a.name,
+            x: flag.zoomX !== undefined ? flag.zoomX : flag.x,
+            y: flag.zoomY !== undefined ? flag.zoomY : flag.y,
+            scale: flag.zoomScale !== undefined ? flag.zoomScale : 1.2,
+            roomIds: flag.roomIds
+          });
         });
       });
       // Falls back to the realm's actual top-level areas (whole-area fit,
@@ -483,8 +508,11 @@
     if (flagNoZoomToggle.checked) return;
     // A fallback (no-flag-yet) area entry has no x/y -- just show the whole
     // area (switchLayer's own fit()) instead of a specific zoom point.
-    const opts = { areaId: a.areaId };
-    if (typeof a.x === "number" && typeof a.y === "number") opts.focus = { x: a.x, y: a.y, scale: 1.2 };
+    // highlightRoomIds is always passed (even as the flag's own undefined/
+    // null) so switchLayer knows to highlight -- falling back to every room
+    // in the area for an area-level flag or a no-flag-yet fallback entry.
+    const opts = { areaId: a.areaId, highlightRoomIds: a.roomIds || null };
+    if (typeof a.x === "number" && typeof a.y === "number") opts.focus = { x: a.x, y: a.y, scale: a.scale || 1.2 };
     switchLayer(selectedFlagRealm.layerId + WIP_SUFFIX, opts);
   }
 

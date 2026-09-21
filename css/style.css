@@ -494,6 +494,14 @@ html, body {
 .rgv-svg.rgv-placing { cursor: crosshair; }
 .rgv-room-openable { cursor: pointer; }
 .room-marker-square { stroke: #1a1a1a; stroke-width: 1; pointer-events: none; }
+/* Jump tab / My Flags "jump to this" highlight -- a bright glow around
+   every room tied to the flag/area just jumped to (see js/app.js's
+   switchLayer opts.highlightRoomIds). */
+.rgv-room.rgv-room-highlighted .rgv-room-body {
+  stroke: #ffd23f;
+  stroke-width: 4;
+  filter: drop-shadow(0 0 4px #ffd23f);
+}
 /* Options panel's "Show difficulty squares" checkbox toggles this on
    <body> -- hides markers everywhere at once (main view + any open
    Mini-Area windows) without re-rendering, so pan/zoom is never disturbed. */

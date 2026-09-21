@@ -122,6 +122,7 @@ const RoomGraphView = (function () {
       const openable = !!(room.connector && room.connector.targetMiniAreaId);
       if (openable) roomG.classList.add("rgv-room-openable");
       const rect = el("rect", {
+        class: "rgv-room-body",
         x: room.x, y: room.y, width: s, height: s,
         fill: room.color || "#5aa9e6", stroke: room.borderColor || "#1a1a1a", "stroke-width": 2, rx: 2
       }, roomG);
@@ -433,7 +434,20 @@ const RoomGraphView = (function () {
       // then this auto-disarms. Re-showing a different node (area switch)
       // silently drops an armed-but-unused placement.
       startPlacing(cb) { if (interaction) interaction.setPlacing(cb); },
-      cancelPlacing() { if (interaction) interaction.cancelPlacing(); }
+      cancelPlacing() { if (interaction) interaction.cancelPlacing(); },
+      // Glows every room whose id is in `ids` (e.g. a flag's roomIds, or an
+      // entire area's rooms for an area-level flag) and un-glows every other
+      // room -- always a full replace, never additive, so there's no need
+      // for a separate "clear" call. A fresh .show() already wipes and
+      // rebuilds the whole SVG anyway (see renderNode), so switching to a
+      // different area naturally drops any highlight on its own even
+      // without this being called again.
+      highlightRooms(ids) {
+        const set = new Set(ids || []);
+        svg.querySelectorAll(".rgv-room").forEach(roomEl => {
+          roomEl.classList.toggle("rgv-room-highlighted", set.has(roomEl.getAttribute("data-room-id")));
+        });
+      }
     };
   }
 
