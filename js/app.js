@@ -432,50 +432,94 @@
     catch (e) { /* storage unavailable -- just won't persist */ }
   });
 
-  flagNavToggleBtn.addEventListener("click", () => {
-    const collapsed = flagNavPanel.classList.toggle("collapsed");
-    flagNavToggleBtn.textContent = collapsed ? "‹" : "›";
-    flagNavToggleBtn.title = collapsed ? "Show the Options panel" : "Hide the Options panel";
-  });
+  // ---- collapse + tear off/redock into a free-floating window -- shared
+  // by both the Options panel (#flag-nav) and the Legend panel. `label` is
+  // just for the toggle button's title text.
+  function wireFloatablePanel(panel, header, tearoffBtn, toggleBtn, label) {
+    toggleBtn.addEventListener("click", () => {
+      const collapsed = panel.classList.toggle("collapsed");
+      toggleBtn.textContent = collapsed ? "‹" : "›";
+      toggleBtn.title = (collapsed ? "Show the " : "Hide the ") + label + " panel";
+    });
 
-  // ---- tear off / redock the Options panel into a free-floating window ----
-  const flagNavTearoffBtn = document.getElementById("flag-nav-tearoff-btn");
-  const flagNavHeader = document.getElementById("flag-nav-header");
-  flagNavTearoffBtn.addEventListener("click", () => {
-    const floating = flagNavPanel.classList.toggle("floating");
-    if (floating) {
-      const rect = flagNavPanel.getBoundingClientRect();
-      flagNavPanel.style.left = rect.left + "px";
-      flagNavPanel.style.top = rect.top + "px";
-      flagNavPanel.style.right = "auto";
-      flagNavPanel.style.position = "fixed";
-      flagNavTearoffBtn.textContent = "⇲";
-      flagNavTearoffBtn.title = "Dock back to the sidebar";
-    } else {
-      flagNavPanel.style.left = "";
-      flagNavPanel.style.top = "";
-      flagNavPanel.style.right = "";
-      flagNavPanel.style.position = "";
-      flagNavTearoffBtn.textContent = "⇱";
-      flagNavTearoffBtn.title = "Pop out into a floating window";
+    tearoffBtn.addEventListener("click", () => {
+      const floating = panel.classList.toggle("floating");
+      if (floating) {
+        const rect = panel.getBoundingClientRect();
+        panel.style.left = rect.left + "px";
+        panel.style.top = rect.top + "px";
+        panel.style.right = "auto";
+        panel.style.position = "fixed";
+        tearoffBtn.textContent = "⇲";
+        tearoffBtn.title = "Dock back to the sidebar";
+      } else {
+        panel.style.left = "";
+        panel.style.top = "";
+        panel.style.right = "";
+        panel.style.position = "";
+        tearoffBtn.textContent = "⇱";
+        tearoffBtn.title = "Pop out into a floating window";
+      }
+    });
+    // Drag-to-move by the header, only while floating -- docked, the panel
+    // stays anchored at its normal CSS position and isn't draggable.
+    let dragging = false, dragStart = null, posStart = null;
+    header.addEventListener("pointerdown", e => {
+      if (!panel.classList.contains("floating") || e.target.closest("button")) return;
+      dragging = true;
+      dragStart = { x: e.clientX, y: e.clientY };
+      posStart = { left: panel.offsetLeft, top: panel.offsetTop };
+      header.setPointerCapture(e.pointerId);
+    });
+    header.addEventListener("pointermove", e => {
+      if (!dragging) return;
+      panel.style.left = Math.max(0, posStart.left + (e.clientX - dragStart.x)) + "px";
+      panel.style.top = Math.max(0, posStart.top + (e.clientY - dragStart.y)) + "px";
+    });
+    header.addEventListener("pointerup", () => { dragging = false; });
+  }
+
+  wireFloatablePanel(
+    flagNavPanel, document.getElementById("flag-nav-header"),
+    document.getElementById("flag-nav-tearoff-btn"), flagNavToggleBtn, "Options"
+  );
+
+  const legendPanel = document.getElementById("legend-panel");
+  wireFloatablePanel(
+    legendPanel, document.getElementById("legend-panel-header"),
+    document.getElementById("legend-tearoff-btn"), document.getElementById("legend-toggle-btn"), "Legend"
+  );
+
+  // Icon legend: {name, category, dataUrl} per built-in icon, exported by
+  // Test Builder (js/data/icon-legend.js, captured by the moderator's
+  // Accept Updated Map import) -- maps a room.icon image back to a
+  // readable name instead of just showing the raw picture with no label.
+  // Empty/undefined until the moderator applies an import that includes it.
+  function renderLegendIcons() {
+    const body = document.getElementById("legend-icons-body");
+    const icons = (typeof ICON_LEGEND !== "undefined" && ICON_LEGEND) || [];
+    if (icons.length === 0) {
+      body.innerHTML = '<div class="muted">None yet.</div>';
+      return;
     }
-  });
-  // Drag-to-move by the header, only while floating -- docked, the panel
-  // stays anchored top-right (its normal CSS position) and isn't draggable.
-  let flagNavDragging = false, flagNavDragStart = null, flagNavPosStart = null;
-  flagNavHeader.addEventListener("pointerdown", e => {
-    if (!flagNavPanel.classList.contains("floating") || e.target.closest("button")) return;
-    flagNavDragging = true;
-    flagNavDragStart = { x: e.clientX, y: e.clientY };
-    flagNavPosStart = { left: flagNavPanel.offsetLeft, top: flagNavPanel.offsetTop };
-    flagNavHeader.setPointerCapture(e.pointerId);
-  });
-  flagNavHeader.addEventListener("pointermove", e => {
-    if (!flagNavDragging) return;
-    flagNavPanel.style.left = Math.max(0, flagNavPosStart.left + (e.clientX - flagNavDragStart.x)) + "px";
-    flagNavPanel.style.top = Math.max(0, flagNavPosStart.top + (e.clientY - flagNavDragStart.y)) + "px";
-  });
-  flagNavHeader.addEventListener("pointerup", () => { flagNavDragging = false; });
+    const grid = document.createElement("div");
+    grid.className = "legend-icons-grid";
+    icons.forEach(icon => {
+      const item = document.createElement("div");
+      item.className = "legend-icon-item";
+      const img = document.createElement("img");
+      img.src = icon.dataUrl;
+      img.alt = icon.name || "";
+      item.appendChild(img);
+      const label = document.createElement("span");
+      label.textContent = icon.name || "";
+      item.appendChild(label);
+      grid.appendChild(item);
+    });
+    body.innerHTML = "";
+    body.appendChild(grid);
+  }
+  renderLegendIcons();
 
   // 200 (not the search-box's 20) -- the Area list is currently an
   // unfiltered per-flag audit view (see buildFlagRealms), so a realm with

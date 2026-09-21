@@ -20,6 +20,9 @@ const RoomGraphView = (function () {
   // class (see js/app.js's Options panel checkbox), not re-rendering, so it
   // doesn't disturb the current pan/zoom.
   const MARKER_COLORS = { purple: "#9b59d0", red: "#e33d3d", green: "#3fbf5f", white: "#f5f5f5" };
+  // Highlight glow color when none of the highlighted rooms have a marker
+  // -- same fallback Test Builder's own computeFlagGlowInfo uses.
+  const DEFAULT_GLOW_COLOR = "#ff2fd6";
 
   function el(tag, attrs, parent) {
     const e = document.createElementNS(SVG_NS, tag);
@@ -261,6 +264,34 @@ const RoomGraphView = (function () {
       svg.classList.add("rgv-placing");
     }
 
+    // Highlight color: majority marker color among whatever's being
+    // highlighted (ties broken by MARKER_COLORS' own key order), same as
+    // Test Builder's own computeFlagGlowInfo -- a room with no marker still
+    // highlights in that majority color, and DEFAULT_GLOW_COLOR is used
+    // when none of the highlighted rooms have a marker at all. Applied as a
+    // CSS custom property on the svg root (inherited by every room), not
+    // per-room, since one highlighted set always shares one color.
+    function computeGlowColor(idSet) {
+      const counts = {};
+      (node.rooms || []).forEach(room => {
+        if (idSet.has(room.id) && room.marker && MARKER_COLORS[room.marker]) {
+          counts[room.marker] = (counts[room.marker] || 0) + 1;
+        }
+      });
+      let best = null, bestCount = 0;
+      Object.keys(MARKER_COLORS).forEach(key => {
+        const c = counts[key] || 0;
+        if (c > bestCount) { bestCount = c; best = key; }
+      });
+      return best ? MARKER_COLORS[best] : DEFAULT_GLOW_COLOR;
+    }
+    function applyHighlight(idSet) {
+      svg.style.setProperty("--flag-glow-color", computeGlowColor(idSet));
+      svg.querySelectorAll(".rgv-room").forEach(roomEl => {
+        roomEl.classList.toggle("rgv-room-highlighted", idSet.has(roomEl.getAttribute("data-room-id")));
+      });
+    }
+
     // Click-to-highlight: plain click on a (non-connector) room highlights
     // every room sharing a flag-group (roomIds) with it -- same glow as the
     // Options Jump tab, just triggered from the canvas instead of a
@@ -278,13 +309,11 @@ const RoomGraphView = (function () {
         }
       });
       if (idSet.size === 0) clickedRoomIds.forEach(id => idSet.add(id));
-      svg.querySelectorAll(".rgv-room").forEach(roomEl => {
-        roomEl.classList.toggle("rgv-room-highlighted", idSet.has(roomEl.getAttribute("data-room-id")));
-      });
+      applyHighlight(idSet);
     }
     function clearClickHighlight() {
       clickedRoomIds = new Set();
-      svg.querySelectorAll(".rgv-room-highlighted").forEach(roomEl => roomEl.classList.remove("rgv-room-highlighted"));
+      applyHighlight(new Set());
     }
 
     // Captured at gesture start (not re-read at pointerup) so releasing
@@ -366,7 +395,8 @@ const RoomGraphView = (function () {
     fit();
     return {
       fit, zoomBy: f => { view.scale = Math.max(0.02, Math.min(6, view.scale * f)); apply(); }, centerOn,
-      setPlacing, cancelPlacing
+      setPlacing, cancelPlacing,
+      highlightRooms(ids) { applyHighlight(new Set(ids || [])); }
     };
   }
 
@@ -482,13 +512,10 @@ const RoomGraphView = (function () {
       // for a separate "clear" call. A fresh .show() already wipes and
       // rebuilds the whole SVG anyway (see renderNode), so switching to a
       // different area naturally drops any highlight on its own even
-      // without this being called again.
-      highlightRooms(ids) {
-        const set = new Set(ids || []);
-        svg.querySelectorAll(".rgv-room").forEach(roomEl => {
-          roomEl.classList.toggle("rgv-room-highlighted", set.has(roomEl.getAttribute("data-room-id")));
-        });
-      }
+      // without this being called again. Color is computed fresh each call
+      // (see attachInteraction's computeGlowColor) from whichever rooms are
+      // actually being highlighted.
+      highlightRooms(ids) { if (interaction) interaction.highlightRooms(ids); }
     };
   }
 

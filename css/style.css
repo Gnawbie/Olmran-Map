@@ -212,17 +212,25 @@ html, body {
 #item-browser .item-name { font-weight: 600; }
 #item-browser .item-meta { color: var(--muted); }
 
-/* ---- flag navigation sidebar ---- */
-#flag-nav {
+/* ---- side panel stack (Options + Legend) ----
+   One shared absolutely-positioned column; #flag-nav and #legend-panel are
+   plain flex children so they sit stacked/connected with no gap-math
+   needed, and either resizing (collapse) or disappearing (torn off into
+   its own floating window, position:fixed pulls it out of this flow
+   entirely) reflows the other automatically. */
+#side-panel-stack {
   position: absolute;
   top: 62px;
   right: 12px;
   z-index: 1000;
   width: 240px;
   max-width: calc(100vw - 24px);
-  overflow: visible;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
-#flag-nav-header {
+#flag-nav, #legend-panel { overflow: visible; }
+#flag-nav-header, #legend-panel-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -232,7 +240,7 @@ html, body {
   font-size: 13px;
 }
 .flag-nav-header-btns { display: flex; align-items: center; gap: 4px; }
-#flag-nav-header button {
+#flag-nav-header button, #legend-panel-header button {
   background: none;
   border: none;
   color: var(--text);
@@ -241,23 +249,36 @@ html, body {
   padding: 0 2px;
   line-height: 1;
 }
-#flag-nav.collapsed { width: auto; }
-#flag-nav.collapsed #flag-nav-body { display: none; }
-/* Torn off into a floating window: JS switches position to fixed with its
-   own left/top (see app.js), this just adds the drag affordance + a
-   stronger shadow so it visually reads as "detached" from the sidebar. */
-#flag-nav.floating {
+#flag-nav.collapsed, #legend-panel.collapsed { width: auto; }
+#flag-nav.collapsed #flag-nav-body, #legend-panel.collapsed #legend-panel-body { display: none; }
+/* Torn off into its own floating window: JS switches position to fixed
+   with its own left/top (see app.js's wireFloatablePanel), this just adds
+   the drag affordance + a stronger shadow so it visually reads as
+   "detached" from the stack -- position:fixed already removes it from
+   #side-panel-stack's flex flow, so the other panel reflows on its own. */
+#flag-nav.floating, #legend-panel.floating {
   box-shadow: 0 8px 24px rgba(0,0,0,0.45);
+  width: 240px;
 }
-#flag-nav.floating #flag-nav-header {
+#flag-nav.floating #flag-nav-header, #legend-panel.floating #legend-panel-header {
   cursor: move;
 }
-#flag-nav-body {
+#flag-nav-body, #legend-panel-body {
   padding: 0 12px 12px;
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
+
+.legend-section h4 { margin: 0 0 6px; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.02em; }
+.legend-hotkeys { margin: 0; padding-left: 18px; font-size: 12px; }
+.legend-hotkeys li { padding: 2px 0; }
+.legend-row { display: flex; align-items: center; gap: 8px; font-size: 12px; padding: 2px 0; }
+.legend-swatch { width: 12px; height: 12px; border-radius: 2px; border: 1px solid rgba(255,255,255,0.25); flex: none; }
+.legend-hint { font-size: 11px; margin: 6px 0 0; }
+.legend-icons-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+.legend-icon-item { display: flex; flex-direction: column; align-items: center; width: 52px; font-size: 10px; text-align: center; color: var(--muted); }
+.legend-icon-item img { width: 28px; height: 28px; object-fit: contain; background: var(--bg); border: 1px solid var(--panel-border); border-radius: 4px; margin-bottom: 2px; }
 .flag-nav-field label {
   display: block;
   font-size: 11px;
@@ -494,14 +515,26 @@ html, body {
 .rgv-svg.rgv-placing { cursor: crosshair; }
 .rgv-room-openable { cursor: pointer; }
 .room-marker-square { stroke: #1a1a1a; stroke-width: 1; pointer-events: none; }
-/* Jump tab / My Flags "jump to this" highlight -- a bright glow around
-   every room tied to the flag/area just jumped to (see js/app.js's
-   switchLayer opts.highlightRoomIds). */
+/* Jump tab / My Flags / click-to-highlight -- a colored glow around every
+   room tied to the flag/area currently highlighted (see js/app.js's
+   switchLayer opts.highlightRoomIds and room-graph-view.js's click
+   handling). Color is set per-highlight via --flag-glow-color (majority
+   marker color among the highlighted rooms, computeGlowColor), same
+   fallback magenta as Test Builder's own flag-glow-rect when none of them
+   have a marker. Matches Test Builder's exact stroke/glow spec so a room
+   looks the same highlighted here as it does there. */
 .rgv-room.rgv-room-highlighted .rgv-room-body {
-  stroke: #ffd23f;
-  stroke-width: 4;
-  filter: drop-shadow(0 0 4px #ffd23f);
+  stroke: var(--flag-glow-color, #ff2fd6);
+  stroke-width: 3;
+  filter:
+    drop-shadow(0 0 6px var(--flag-glow-color, #ff2fd6))
+    drop-shadow(0 0 10px var(--flag-glow-color, #ff2fd6))
+    drop-shadow(0 0 6px var(--flag-glow-color, #ff2fd6));
 }
+/* A marker square sitting inside its own room's glow ring reads as a
+   "square doughnut" -- hidden while highlighted, same as Test Builder's
+   own canvas, and shown again as soon as the highlight clears. */
+.rgv-room.rgv-room-highlighted .room-marker-square { display: none; }
 /* Options panel's "Show difficulty squares" checkbox toggles this on
    <body> -- hides markers everywhere at once (main view + any open
    Mini-Area windows) without re-rendering, so pan/zoom is never disturbed. */
