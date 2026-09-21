@@ -17,7 +17,7 @@ const REALM_EVIL = [
     "textLabels": [],
     "arrows": [],
     "miniAreas": [],
-    "flag": null,
+    "flags": [],
     "grid": {
       "step": 50,
       "phase": {
