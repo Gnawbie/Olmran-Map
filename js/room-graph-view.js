@@ -264,13 +264,11 @@ const RoomGraphView = (function () {
       svg.classList.add("rgv-placing");
     }
 
-    // Highlight color: majority marker color among whatever's being
-    // highlighted (ties broken by MARKER_COLORS' own key order), same as
-    // Test Builder's own computeFlagGlowInfo -- a room with no marker still
-    // highlights in that majority color, and DEFAULT_GLOW_COLOR is used
-    // when none of the highlighted rooms have a marker at all. Applied as a
-    // CSS custom property on the svg root (inherited by every room), not
-    // per-room, since one highlighted set always shares one color.
+    // Highlight color: majority marker color within one group (ties broken
+    // by MARKER_COLORS' own key order), same as Test Builder's own
+    // computeFlagGlowInfo -- a room with no marker still highlights in that
+    // group's majority color, and DEFAULT_GLOW_COLOR is used when none of
+    // the group's rooms have a marker at all.
     function computeGlowColor(idSet) {
       const counts = {};
       (node.rooms || []).forEach(room => {
@@ -285,35 +283,54 @@ const RoomGraphView = (function () {
       });
       return best ? MARKER_COLORS[best] : DEFAULT_GLOW_COLOR;
     }
-    function applyHighlight(idSet) {
-      svg.style.setProperty("--flag-glow-color", computeGlowColor(idSet));
+    // Applies one or more independent highlight groups at once -- e.g.
+    // shift-clicking into two different areas keeps each its own color
+    // instead of blending into one shared majority. --flag-glow-color is
+    // set per room-group element (inherited by its own .rgv-room-body),
+    // not on the svg root, so different rooms can carry different colors
+    // simultaneously. A room in more than one group gets whichever group
+    // was applied last -- rare edge case, not worth a defined precedence.
+    // Always a full replace: every room's highlight/color is cleared
+    // first, so there's no separate "clear" call needed.
+    function applyHighlightGroups(groups) {
+      const roomElsById = new Map();
       svg.querySelectorAll(".rgv-room").forEach(roomEl => {
-        roomEl.classList.toggle("rgv-room-highlighted", idSet.has(roomEl.getAttribute("data-room-id")));
+        roomElsById.set(roomEl.getAttribute("data-room-id"), roomEl);
+        roomEl.classList.remove("rgv-room-highlighted");
+        roomEl.style.removeProperty("--flag-glow-color");
+      });
+      groups.forEach(group => {
+        group.ids.forEach(id => {
+          const roomEl = roomElsById.get(id);
+          if (!roomEl) return;
+          roomEl.classList.add("rgv-room-highlighted");
+          roomEl.style.setProperty("--flag-glow-color", group.color);
+        });
       });
     }
 
     // Click-to-highlight: plain click on a (non-connector) room highlights
-    // every room sharing a flag-group (roomIds) with it -- same glow as the
-    // Options Jump tab, just triggered from the canvas instead of a
-    // dropdown. Shift-click adds to a running set of clicked rooms instead
-    // of replacing it, highlighting the union of every matching flag-group
-    // across all of them. A room that doesn't belong to any flag group
-    // still highlights itself alone, so a click always visibly does
-    // something. Clicking empty canvas clears it.
+    // every room sharing a flag-group (roomIds) with it, in that flag's own
+    // majority-marker color -- same glow as the Options Jump tab, just
+    // triggered from the canvas instead of a dropdown. Shift-click adds
+    // another room to a running set instead of replacing it; each matching
+    // flag becomes its own color group, so highlighting rooms from two
+    // differently-colored areas keeps them each their own color instead of
+    // merging into one. A clicked room with no flag group at all still
+    // highlights itself alone. Clicking empty canvas clears it.
     let clickedRoomIds = new Set();
     function applyClickHighlight() {
-      const idSet = new Set();
-      (node.flags || []).forEach(f => {
-        if (f.roomIds && f.roomIds.some(id => clickedRoomIds.has(id))) {
-          f.roomIds.forEach(id => idSet.add(id));
-        }
-      });
-      if (idSet.size === 0) clickedRoomIds.forEach(id => idSet.add(id));
-      applyHighlight(idSet);
+      const matchingFlags = (node.flags || []).filter(f => f.roomIds && f.roomIds.some(id => clickedRoomIds.has(id)));
+      const groups = matchingFlags.map(f => ({ ids: f.roomIds, color: computeGlowColor(new Set(f.roomIds)) }));
+      const covered = new Set();
+      groups.forEach(g => g.ids.forEach(id => covered.add(id)));
+      const leftover = Array.from(clickedRoomIds).filter(id => !covered.has(id));
+      if (leftover.length > 0) groups.push({ ids: leftover, color: computeGlowColor(new Set(leftover)) });
+      applyHighlightGroups(groups);
     }
     function clearClickHighlight() {
       clickedRoomIds = new Set();
-      applyHighlight(new Set());
+      applyHighlightGroups([]);
     }
 
     // Captured at gesture start (not re-read at pointerup) so releasing
@@ -396,7 +413,10 @@ const RoomGraphView = (function () {
     return {
       fit, zoomBy: f => { view.scale = Math.max(0.02, Math.min(6, view.scale * f)); apply(); }, centerOn,
       setPlacing, cancelPlacing,
-      highlightRooms(ids) { applyHighlight(new Set(ids || [])); }
+      highlightRooms(ids) {
+        const idSet = new Set(ids || []);
+        applyHighlightGroups(idSet.size > 0 ? [{ ids: idSet, color: computeGlowColor(idSet) }] : []);
+      }
     };
   }
 
