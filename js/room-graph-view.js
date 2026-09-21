@@ -14,6 +14,12 @@ const RoomGraphView = (function () {
 
   const SVG_NS = "http://www.w3.org/2000/svg";
   const DEFAULT_ROOM_SIZE = 30;
+  // Room difficulty markers (Test Builder's room.marker) -- same fixed
+  // palette/geometry as Test Builder's own rooms.js, so a room looks the
+  // same here as it did while being authored. Visibility toggled via a CSS
+  // class (see js/app.js's Options panel checkbox), not re-rendering, so it
+  // doesn't disturb the current pan/zoom.
+  const MARKER_COLORS = { purple: "#9b59d0", red: "#e33d3d", green: "#3fbf5f", white: "#f5f5f5" };
 
   function el(tag, attrs, parent) {
     const e = document.createElementNS(SVG_NS, tag);
@@ -122,6 +128,15 @@ const RoomGraphView = (function () {
       if (room.isRiver) { rect.setAttribute("stroke-dasharray", "3,3"); rect.setAttribute("stroke", "#5aa9e6"); }
       if (room.icon) {
         el("image", { x: room.x, y: room.y, width: s, height: s, href: room.icon, "pointer-events": "none" }, roomG);
+      }
+      if (room.marker && !room.iconName && MARKER_COLORS[room.marker]) {
+        const msize = Math.max(6, s * 0.22);
+        el("rect", {
+          class: "room-marker-square",
+          x: room.x + s / 2 - msize / 2, y: room.y + s / 2 - msize / 2,
+          width: msize, height: msize,
+          fill: MARKER_COLORS[room.marker]
+        }, roomG);
       }
       drawConnector(node, room, roomG);
       drawRoomArrow(node, room, roomG);

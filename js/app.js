@@ -381,6 +381,27 @@
   const flagAreaResults = document.getElementById("flag-nav-area-results");
   let selectedFlagRealm = null;
 
+  // ---- difficulty-square marker visibility (persisted per-device) ----
+  const DIFFICULTY_MARKERS_KEY = "showDifficultyMarkers";
+  const difficultyMarkersToggle = document.getElementById("difficulty-markers-toggle");
+  function applyDifficultyMarkersVisible(visible) {
+    document.body.classList.toggle("rgv-hide-difficulty-markers", !visible);
+  }
+  (function initDifficultyMarkersToggle() {
+    let visible = true;
+    try {
+      const stored = localStorage.getItem(DIFFICULTY_MARKERS_KEY);
+      if (stored !== null) visible = stored === "1";
+    } catch (e) { /* storage unavailable -- default stays visible */ }
+    difficultyMarkersToggle.checked = visible;
+    applyDifficultyMarkersVisible(visible);
+  })();
+  difficultyMarkersToggle.addEventListener("change", () => {
+    applyDifficultyMarkersVisible(difficultyMarkersToggle.checked);
+    try { localStorage.setItem(DIFFICULTY_MARKERS_KEY, difficultyMarkersToggle.checked ? "1" : "0"); }
+    catch (e) { /* storage unavailable -- just won't persist */ }
+  });
+
   flagNavToggleBtn.addEventListener("click", () => {
     const collapsed = flagNavPanel.classList.toggle("collapsed");
     flagNavToggleBtn.textContent = collapsed ? "‹" : "›";

@@ -493,3 +493,8 @@ html, body {
 .rgv-svg { display: block; cursor: grab; }
 .rgv-svg.rgv-placing { cursor: crosshair; }
 .rgv-room-openable { cursor: pointer; }
+.room-marker-square { stroke: #1a1a1a; stroke-width: 1; pointer-events: none; }
+/* Options panel's "Show difficulty squares" checkbox toggles this on
+   <body> -- hides markers everywhere at once (main view + any open
+   Mini-Area windows) without re-rendering, so pan/zoom is never disturbed. */
+body.rgv-hide-difficulty-markers .room-marker-square { display: none; }
