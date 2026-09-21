@@ -249,7 +249,31 @@ html, body {
   padding: 0 2px;
   line-height: 1;
 }
-#flag-nav.collapsed, #legend-panel.collapsed { width: auto; }
+/* Collapsed: a narrow vertical tab (not a wide short bar) -- title text
+   rotated to read bottom-to-top, tear-off/collapse icons stacked above it
+   in normal (unrotated) orientation. align-self: flex-end stops it
+   stretching back out to #side-panel-stack's full 240px width (the
+   default flex align-items:stretch would otherwise do that) while still
+   hugging the right edge the stack itself is anchored to, instead of
+   drifting to the container's left edge. */
+#flag-nav.collapsed, #legend-panel.collapsed {
+  width: 32px;
+  align-self: flex-end;
+}
+#flag-nav.collapsed #flag-nav-header, #legend-panel.collapsed #legend-panel-header {
+  flex-direction: column;
+  justify-content: flex-start;
+  padding: 10px 6px;
+  gap: 10px;
+}
+#flag-nav.collapsed .flag-nav-header-btns, #legend-panel.collapsed .flag-nav-header-btns {
+  flex-direction: column;
+}
+#flag-nav.collapsed #flag-nav-header span, #legend-panel.collapsed #legend-panel-header span {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  letter-spacing: 0.02em;
+}
 #flag-nav.collapsed #flag-nav-body, #legend-panel.collapsed #legend-panel-body { display: none; }
 /* Torn off into its own floating window: JS switches position to fixed
    with its own left/top (see app.js's wireFloatablePanel), this just adds
