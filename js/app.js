@@ -355,9 +355,15 @@
   // plus any linked to specific room-group(s) -- see Test Builder's
   // area-flag.js), so every flag becomes its own jump target here, not just
   // one per area. They all still resolve to the same area via areaId; only
-  // the name/zoom point/roomIds differ per flag. Only type: "Area" flags
-  // are listed -- future flag types ("do different things", per the
-  // author) aren't "zoom to area" targets and don't belong in this tab.
+  // the name/zoom point/roomIds differ per flag.
+  //
+  // TEMPORARY (per user, 2026-09-21): every flag is listed regardless of
+  // type, including any that don't cleanly fit "zoom to area" -- this is
+  // deliberately unfiltered so the Jump tab doubles as an audit view of
+  // everything placed so far, to see what needs cleanup/updating later.
+  // Once flag types beyond "Area" are actually in use, revisit whether
+  // this should go back to filtering on type === "Area".
+  //
   // Uses each flag's zoomX/zoomY/zoomScale (the pan/zoom view captured at
   // placement/last "Set Zoom to Current View"), not its x/y (just the
   // marker's own drawn position, which can be dragged anywhere and often
@@ -373,7 +379,6 @@
       const flagEntries = [];
       areas.forEach(a => {
         (a.flags || []).forEach(flag => {
-          if ((flag.type || "Area") !== "Area") return;
           // Defensive fallback to x/y/1.2 for any flag exported before
           // zoomX/zoomY/zoomScale existed (e.g. an already-open Test
           // Builder tab that hasn't reloaded the newer code yet).
@@ -472,6 +477,10 @@
   });
   flagNavHeader.addEventListener("pointerup", () => { flagNavDragging = false; });
 
+  // 200 (not the search-box's 20) -- the Area list is currently an
+  // unfiltered per-flag audit view (see buildFlagRealms), so a realm with
+  // many flags (Kaid already has 49) shouldn't have most of them silently
+  // hidden behind a low cap when the field is empty.
   function renderFlagResults(container, query, items, labelOf, onPick) {
     container.innerHTML = "";
     const q = query.trim();
@@ -479,7 +488,7 @@
       .map(item => ({ item, score: fuzzyScore(q, labelOf(item)) }))
       .filter(x => q === "" || x.score >= 0)
       .sort((a, b) => b.score - a.score)
-      .slice(0, 20);
+      .slice(0, 200);
     if (scored.length === 0) { container.classList.remove("open"); return; }
     scored.forEach(({ item }) => {
       const row = document.createElement("div");
