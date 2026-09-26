@@ -157,6 +157,7 @@
     }
 
     document.getElementById("layer-select").value = layerId;
+    renderLegendDifficulty(layerId);
     renderFilterChips();
     renderMarkers();
   }
@@ -489,6 +490,23 @@
     legendPanel, document.getElementById("legend-panel-header"),
     document.getElementById("legend-tearoff-btn"), document.getElementById("legend-toggle-btn"), "Legend"
   );
+
+  // The four marker colors mean different things per realm: Kaid uses
+  // difficulty words, while Evil/Good/Chaos use level ranges. Called from
+  // switchLayer() on every layer change (function declaration, so hoisted
+  // above that call site).
+  const LEGEND_DIFFICULTY_LABELS = {
+    difficulty: { white: "White — Low", green: "Green — Normal", red: "Red — Hard", purple: "Purple — Extremely Hard" },
+    level: { white: "White — Levels 1-20", green: "Green — Levels 20-40", red: "Red — Levels 40-60", purple: "Purple — Level 60+" }
+  };
+  const LEVEL_LEGEND_LAYERS = new Set(["olmran-evil", "olmran-good", "olmran-chaos"]);
+  function renderLegendDifficulty(layerId) {
+    const baseId = isWipLayerId(layerId) ? baseLayerIdFor(layerId) : layerId;
+    const labels = LEGEND_DIFFICULTY_LABELS[LEVEL_LEGEND_LAYERS.has(baseId) ? "level" : "difficulty"];
+    document.querySelectorAll("[data-legend-key]").forEach(el => {
+      el.textContent = labels[el.dataset.legendKey];
+    });
+  }
 
   // Icon legend: {name, category, dataUrl} per built-in icon, exported by
   // Test Builder (js/data/icon-legend.js, captured by the moderator's
