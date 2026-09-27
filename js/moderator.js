@@ -354,7 +354,12 @@
 
   async function githubApi(path, options) {
     const opts = options || {};
+    // cache: "no-store" -- GitHub's API responses are browser-cacheable for
+    // ~60s, so a retry right after a successful commit was reading a stale
+    // file sha back and failing with a false "someone else changed this
+    // file" 409.
     const res = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}${path}`, {
+      cache: "no-store",
       ...opts,
       headers: {
         "Accept": "application/vnd.github+json",
