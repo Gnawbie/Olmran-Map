@@ -446,15 +446,115 @@
     });
   }
 
-  map.on("click", e => {
-    if (!armedUserIconType) return;
+  // ---- Placed items: drag a row off the Zone Items list (or the Items tab)
+  // onto the map to pin a personal copy there, saved only in this browser's
+  // localStorage -- like My Icons, but the "type" is a whole item record
+  // instead of a fixed palette, dropped via native HTML5 drag-and-drop
+  // instead of arm-then-click since it's coming from a list, not a palette.
+  const PLACED_ITEMS_KEY = "userPlacedItems";
+  const placedItemLayerGroup = L.layerGroup();
+  let placedItems = loadPlacedItems();
+  let selectedPlacedItemId = null;
+
+  function loadPlacedItems() {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(PLACED_ITEMS_KEY));
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (e) { return []; }
+  }
+  function savePlacedItems(items) {
+    try { localStorage.setItem(PLACED_ITEMS_KEY, JSON.stringify(items)); }
+    catch (e) { /* storage unavailable -- pins just won't persist */ }
+  }
+
+  function placedItemMetaText(it) {
+    return [it.mob, it.slot, it.level ? "lvl " + it.level : null].filter(Boolean).join(" · ");
+  }
+
+  function placedItemIcon(entry, selected) {
+    return L.divIcon({
+      className: "",
+      html: `<div class="placed-item-pin${selected ? " selected" : ""}">${escapeHtml(entry.item.item || "?")}</div>`,
+      iconSize: [150, 24],
+      iconAnchor: [16, 12]
+    });
+  }
+
+  function renderPlacedItems(layer) {
+    placedItemLayerGroup.clearLayers();
+    placedItems.filter(p => p.layer === layer.id).forEach(entry => {
+      const marker = L.marker(pixelToLatLng(layer, entry.x, entry.y), {
+        icon: placedItemIcon(entry, entry.id === selectedPlacedItemId),
+        draggable: true
+      });
+      marker.on("dragend", () => {
+        const p = latLngToPixel(layer, marker.getLatLng());
+        entry.x = Math.round(p.x); entry.y = Math.round(p.y);
+        savePlacedItems(placedItems);
+      });
+      marker.on("click", () => {
+        selectedPlacedItemId = entry.id;
+        renderPlacedItems(layer);
+      });
+      const meta = placedItemMetaText(entry.item);
+      marker.bindPopup(`<h3>${escapeHtml(entry.item.item || "?")}</h3>${meta ? `<p>${escapeHtml(meta)}</p>` : ""}<p class="muted" style="font-size:11px;">Select it, then press Delete to remove.</p>`);
+      placedItemLayerGroup.addLayer(marker);
+    });
+    placedItemLayerGroup.addTo(map);
+  }
+
+  // The list rows (buildZoneItemRow, below) set the dragged item's full
+  // record as JSON on dataTransfer; dropping it anywhere on the Leaflet map
+  // surface (not just the marker layer) reads that back and pins a copy at
+  // the drop point, in this layer's own pixel space.
+  const mapContainerEl = map.getContainer();
+  mapContainerEl.addEventListener("dragover", e => {
+    if (!e.dataTransfer.types.includes("application/json")) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "copy";
+  });
+  mapContainerEl.addEventListener("drop", e => {
+    const raw = e.dataTransfer.getData("application/json");
+    if (!raw) return;
+    e.preventDefault();
     const layer = layerById.get(currentLayerId);
     if (!layer) return;
-    const p = latLngToPixel(layer, e.latlng);
-    userIcons.push({ type: armedUserIconType, layer: currentLayerId, x: Math.round(p.x), y: Math.round(p.y), note: "", locked: false });
-    saveUserIcons(userIcons);
-    renderUserIcons(layer);
-    armUserIconType(null);
+    let it;
+    try { it = JSON.parse(raw); } catch (err) { return; }
+    const p = latLngToPixel(layer, map.mouseEventToLatLng(e));
+    placedItems.push({ id: "pitem_" + Math.random().toString(36).slice(2, 10), item: it, layer: currentLayerId, x: Math.round(p.x), y: Math.round(p.y) });
+    savePlacedItems(placedItems);
+    renderPlacedItems(layer);
+  });
+
+  document.addEventListener("keydown", e => {
+    if (e.key !== "Delete" && e.key !== "Backspace") return;
+    if (!selectedPlacedItemId) return;
+    const tag = (e.target.tagName || "").toLowerCase();
+    if (tag === "input" || tag === "textarea" || e.target.isContentEditable) return;
+    placedItems = placedItems.filter(p => p.id !== selectedPlacedItemId);
+    savePlacedItems(placedItems);
+    selectedPlacedItemId = null;
+    const layer = layerById.get(currentLayerId);
+    if (layer) renderPlacedItems(layer);
+  });
+
+  map.on("click", e => {
+    if (armedUserIconType) {
+      const layer = layerById.get(currentLayerId);
+      if (!layer) return;
+      const p = latLngToPixel(layer, e.latlng);
+      userIcons.push({ type: armedUserIconType, layer: currentLayerId, x: Math.round(p.x), y: Math.round(p.y), note: "", locked: false });
+      saveUserIcons(userIcons);
+      renderUserIcons(layer);
+      armUserIconType(null);
+      return;
+    }
+    if (selectedPlacedItemId) {
+      selectedPlacedItemId = null;
+      const layer = layerById.get(currentLayerId);
+      if (layer) renderPlacedItems(layer);
+    }
   });
 
   // WIP room-graph layers render a realm's exported root Area directly in
@@ -474,6 +574,7 @@
     const toggle = document.getElementById("color-layer-toggle");
     onLayerSwitchResetFlagPlacement(layerId);
     armUserIconType(null);
+    selectedPlacedItemId = null;
 
     if (isWipLayerId(layerId)) {
       const baseId = baseLayerIdFor(layerId);
@@ -485,6 +586,7 @@
       lineLayerGroup.clearLayers();
       amenityLayerGroup.clearLayers();
       userIconLayerGroup.clearLayers();
+      placedItemLayerGroup.clearLayers();
       mapEl.hidden = true;
       roomGraphRoot.hidden = false;
       toggle.hidden = true;
@@ -522,6 +624,7 @@
       renderLinePaths(layer);
       renderAmenityBadges(layer);
       renderUserIcons(layer);
+      renderPlacedItems(layer);
       if (colorLayer) { map.removeLayer(colorLayer); colorLayer = null; }
       if (layer.colorImage) {
         colorLayer = L.imageOverlay(layer.colorImage, colorImageBoundsFor(layer, bounds), { opacity: 0.6 });
@@ -670,33 +773,60 @@
     if (!e.target.closest("#search-wrap")) searchResults.classList.remove("open");
   });
 
-  // ---- item browser ----
+  // ---- item browser: now docked in #side-panel-stack alongside Options and
+  // Legend (see wireFloatablePanel below), instead of its own free-floating
+  // panel -- the toolbar button just mirrors a click on its own header
+  // toggle rather than a separate open/closed mechanism.
   const itemBrowser = document.getElementById("item-browser");
+  const itemBrowserToggleBtn = document.getElementById("item-browser-toggle-btn");
   document.getElementById("item-browser-toggle").addEventListener("click", () => {
-    itemBrowser.classList.toggle("open");
+    itemBrowserToggleBtn.click();
   });
+
+  // Shared by the Zone Items panel and the Items tab's zone view (below) --
+  // draggable so a visitor can drop a copy of the item onto the map (see
+  // "Placed items" above), carrying the same name/mob/slot/level info the
+  // row itself shows.
+  function buildZoneItemRow(it) {
+    const row = document.createElement("div");
+    row.className = "item-row";
+    row.draggable = true;
+    row.title = "Drag onto the map to pin a copy there";
+    const name = document.createElement("div");
+    name.className = "item-name";
+    name.textContent = it.item || "?";
+    const meta = document.createElement("div");
+    meta.className = "item-meta";
+    meta.textContent = placedItemMetaText(it);
+    row.appendChild(name);
+    row.appendChild(meta);
+    row.addEventListener("dragstart", e => {
+      e.dataTransfer.setData("application/json", JSON.stringify(it));
+      e.dataTransfer.effectAllowed = "copy";
+    });
+    return row;
+  }
 
   function renderItemBrowser() {
     const body = document.getElementById("item-browser-body");
     if (!selectedZoneName) return;
-    itemBrowser.classList.add("open");
+    setPanelCollapsed(itemBrowser, itemBrowserToggleBtn, "Zone Items", false);
     const items = ZONE_ITEMS[selectedZoneName];
+    body.innerHTML = "";
     if (!items || items.length === 0) {
       body.innerHTML = `<p style="color: var(--muted); font-size: 12px;">No item data for "${escapeHtml(selectedZoneName)}" yet.</p>`;
     } else {
-      body.innerHTML = `<h4 style="margin:0 0 6px;font-size:13px;">${escapeHtml(selectedZoneName)}</h4>` +
-        items.map(it => `
-          <div class="item-row">
-            <div class="item-name">${escapeHtml(it.item || "?")}</div>
-            <div class="item-meta">${escapeHtml([it.mob, it.slot, it.level ? "lvl " + it.level : null].filter(Boolean).join(" · "))}</div>
-          </div>`).join("");
+      const h4 = document.createElement("h4");
+      h4.style.cssText = "margin:0 0 6px;font-size:13px;";
+      h4.textContent = selectedZoneName;
+      body.appendChild(h4);
+      items.forEach(it => body.appendChild(buildZoneItemRow(it)));
     }
     // Also mirror this zone's items into the Options panel's Items tab
     // (flag-nav-items-tree) -- that tab otherwise only ever shows WIP
     // room-graph AREA_ITEMS, so it stayed stuck on its placeholder text
     // for every Legacy-layer zone pick.
     renderZoneItemsTree(selectedZoneName);
-    itemBrowser.classList.add("open");
   }
 
   // ---- flag navigation sidebar ----
@@ -830,13 +960,18 @@
   });
 
   // ---- collapse + tear off/redock into a free-floating window -- shared
-  // by both the Options panel (#flag-nav) and the Legend panel. `label` is
-  // just for the toggle button's title text.
+  // by the Options, Legend and Zone Items panels. `label` is just for the
+  // toggle button's title text. setPanelCollapsed is also called directly
+  // by renderItemBrowser() to auto-expand Zone Items when a zone is picked.
+  function setPanelCollapsed(panel, toggleBtn, label, collapsed) {
+    panel.classList.toggle("collapsed", collapsed);
+    toggleBtn.textContent = collapsed ? "‹" : "›";
+    toggleBtn.title = (collapsed ? "Show the " : "Hide the ") + label + " panel";
+  }
+
   function wireFloatablePanel(panel, header, tearoffBtn, toggleBtn, label) {
     toggleBtn.addEventListener("click", () => {
-      const collapsed = panel.classList.toggle("collapsed");
-      toggleBtn.textContent = collapsed ? "‹" : "›";
-      toggleBtn.title = (collapsed ? "Show the " : "Hide the ") + label + " panel";
+      setPanelCollapsed(panel, toggleBtn, label, !panel.classList.contains("collapsed"));
     });
 
     tearoffBtn.addEventListener("click", () => {
@@ -879,6 +1014,11 @@
   wireFloatablePanel(
     flagNavPanel, document.getElementById("flag-nav-header"),
     document.getElementById("flag-nav-tearoff-btn"), flagNavToggleBtn, "Options"
+  );
+
+  wireFloatablePanel(
+    itemBrowser, document.getElementById("item-browser-header"),
+    document.getElementById("item-browser-tearoff-btn"), itemBrowserToggleBtn, "Zone Items"
   );
 
   const legendPanel = document.getElementById("legend-panel");
@@ -1050,14 +1190,7 @@
       itemsTreeEl.innerHTML = `<div class="muted">No item data for "${escapeHtml(zoneName)}" yet.</div>`;
       return;
     }
-    items.forEach(it => {
-      const row = document.createElement("div");
-      row.className = "item-row";
-      row.innerHTML = `
-        <div class="item-name">${escapeHtml(it.item || "?")}</div>
-        <div class="item-meta">${escapeHtml([it.mob, it.slot, it.level ? "lvl " + it.level : null].filter(Boolean).join(" · "))}</div>`;
-      itemsTreeEl.appendChild(row);
-    });
+    items.forEach(it => itemsTreeEl.appendChild(buildZoneItemRow(it)));
   }
 
   // Behaves like a <select> that also happens to be searchable: clicking or

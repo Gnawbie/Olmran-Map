@@ -27,14 +27,19 @@
 
   <div id="filter-chips"></div>
 
-  <div id="item-browser" class="panel">
-    <h3>Zone Items</h3>
-    <div id="item-browser-body">
-      <p style="color: var(--muted); font-size: 12px;">Click a zone on the map, or search for one, to see its items here.</p>
-    </div>
-  </div>
-
   <div id="side-panel-stack">
+    <div id="item-browser" class="panel">
+      <div id="item-browser-header">
+        <span>Zone Items</span>
+        <div class="flag-nav-header-btns">
+          <button id="item-browser-tearoff-btn" title="Pop out into a floating window">⇱</button>
+          <button id="item-browser-toggle-btn" title="Hide the Zone Items panel">›</button>
+        </div>
+      </div>
+      <div id="item-browser-body">
+        <p style="color: var(--muted); font-size: 12px;">Click a zone on the map, or search for one, to see its items here.</p>
+      </div>
+    </div>
     <div id="flag-nav" class="panel">
       <div id="flag-nav-header">
         <span>Options</span>
