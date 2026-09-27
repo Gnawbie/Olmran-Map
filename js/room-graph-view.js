@@ -176,6 +176,20 @@ const RoomGraphView = (function () {
         lines.forEach((line, i) => {
           el("tspan", { x: t.x, dy: i === 0 ? 0 : size * 1.15 }, textEl).textContent = line;
         });
+        // Optional solid backing rect (Test Builder's label.bgColor), sized
+        // to the text's own rendered bounding box (only known once it's in
+        // the DOM, which el() already did above) plus a little padding,
+        // inserted behind the text node.
+        if (t.bgColor) {
+          const bbox = textEl.getBBox();
+          const pad = Math.max(2, size * 0.25);
+          const bg = el("rect", {
+            x: bbox.x - pad, y: bbox.y - pad,
+            width: bbox.width + pad * 2, height: bbox.height + pad * 2,
+            fill: t.bgColor
+          });
+          g.insertBefore(bg, textEl);
+        }
       }
     });
   }
