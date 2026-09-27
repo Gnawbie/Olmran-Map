@@ -683,14 +683,19 @@
     const items = ZONE_ITEMS[selectedZoneName];
     if (!items || items.length === 0) {
       body.innerHTML = `<p style="color: var(--muted); font-size: 12px;">No item data for "${escapeHtml(selectedZoneName)}" yet.</p>`;
-      return;
+    } else {
+      body.innerHTML = `<h4 style="margin:0 0 6px;font-size:13px;">${escapeHtml(selectedZoneName)}</h4>` +
+        items.map(it => `
+          <div class="item-row">
+            <div class="item-name">${escapeHtml(it.item || "?")}</div>
+            <div class="item-meta">${escapeHtml([it.mob, it.slot, it.level ? "lvl " + it.level : null].filter(Boolean).join(" · "))}</div>
+          </div>`).join("");
     }
-    body.innerHTML = `<h4 style="margin:0 0 6px;font-size:13px;">${escapeHtml(selectedZoneName)}</h4>` +
-      items.map(it => `
-        <div class="item-row">
-          <div class="item-name">${escapeHtml(it.item || "?")}</div>
-          <div class="item-meta">${escapeHtml([it.mob, it.slot, it.level ? "lvl " + it.level : null].filter(Boolean).join(" · "))}</div>
-        </div>`).join("");
+    // Also mirror this zone's items into the Options panel's Items tab
+    // (flag-nav-items-tree) -- that tab otherwise only ever shows WIP
+    // room-graph AREA_ITEMS, so it stayed stuck on its placeholder text
+    // for every Legacy-layer zone pick.
+    renderZoneItemsTree(selectedZoneName);
     itemBrowser.classList.add("open");
   }
 
@@ -1031,6 +1036,27 @@
       });
       details.appendChild(list);
       itemsTreeEl.appendChild(details);
+    });
+  }
+
+  // Zone items (ZONE_ITEMS, Legacy flat layers) use a flatter per-drop shape
+  // ({item, mob, slot, level, ...}) than AREA_ITEMS's {item, monsters: [...]}
+  // tree above, so it gets its own simple row-list renderer into the same
+  // Items-tab container instead of forcing one shape into the other's UI.
+  function renderZoneItemsTree(zoneName) {
+    itemsTreeEl.innerHTML = "";
+    const items = ZONE_ITEMS[zoneName] || [];
+    if (items.length === 0) {
+      itemsTreeEl.innerHTML = `<div class="muted">No item data for "${escapeHtml(zoneName)}" yet.</div>`;
+      return;
+    }
+    items.forEach(it => {
+      const row = document.createElement("div");
+      row.className = "item-row";
+      row.innerHTML = `
+        <div class="item-name">${escapeHtml(it.item || "?")}</div>
+        <div class="item-meta">${escapeHtml([it.mob, it.slot, it.level ? "lvl " + it.level : null].filter(Boolean).join(" · "))}</div>`;
+      itemsTreeEl.appendChild(row);
     });
   }
 

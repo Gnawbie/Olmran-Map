@@ -212,6 +212,13 @@ html, body {
 #item-browser .item-name { font-weight: 600; }
 #item-browser .item-meta { color: var(--muted); }
 
+/* Zone items rendered into the Options panel's Items tab (Legacy zones) --
+   same look as #item-browser's rows above, just a different container. */
+#flag-nav-items-tree .item-row { padding: 6px 0; border-bottom: 1px solid var(--panel-border); font-size: 12px; }
+#flag-nav-items-tree .item-row:last-child { border-bottom: none; }
+#flag-nav-items-tree .item-name { font-weight: 600; }
+#flag-nav-items-tree .item-meta { color: var(--muted); }
+
 /* ---- side panel stack (Options + Legend) ----
    One shared absolutely-positioned column; #flag-nav and #legend-panel are
    plain flex children so they sit stacked/connected with no gap-math
