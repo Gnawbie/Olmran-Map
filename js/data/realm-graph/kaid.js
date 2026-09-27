@@ -40060,12 +40060,12 @@ const REALM_KAID = [
         "hidden": false,
         "arrow": null,
         "connector": null,
-        "icon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACIAAAAiCAYAAAA6RwvCAAABkklEQVR4nO1YQU7EMAx0o16RekFCEQf2B90HwIEjj+ANPIU38AiOe4AH0B8sB2Qh7WWlfcCilerKcZMmTrsoSIxUtU3cZDxO7LYVvHwfoQAYKAQGCkHt3D1eVb86O1sWLhElrLWj9YWIWc7US0we6teQqueQaKAd2eyhc+xTyZgcEg20XhK+vpiCKkWsIEFYXd6PbLe7zWBH6qQoY5YkIds1yiSHpgmQaG8ehsPXHwqhiojtvfCRkJPLNh+ZKVVUu2blCcfd7fVw/fb+NbKnNXOWFN/2XnMS/F4qNYuIFWEJLc4T1k8XwT56LhYeM1eNdU+CzrmqFFN9DRQCA4XAwF8l0n2+Ojnj4/ngnKmd7GYTwb5IUeGaSkxEwgd6jsYJFb+s0HRCFUKuGuoUv91tRolNkpH2qZhUBEV4+OAnr6XnvI2TiIVFpcgeuiFNc2V8YfCRiCG6RpB54VMmlUTsDS1JEUSsqFhJZULQkFDtGhTKhCSXfalv8apdg0wZmjRmf7YPLGSDL/mlV/3/lhAopvr+AOUn0Ai24oT9AAAAAElFTkSuQmCC",
+        "icon": null,
         "isRiver": false,
         "isCenter": false,
         "locked": true,
         "iconName": null,
-        "marker": null,
+        "marker": "purple",
         "tileGroupId": null
       },
       {
@@ -41266,12 +41266,12 @@ const REALM_KAID = [
         "hidden": false,
         "arrow": null,
         "connector": null,
-        "icon": null,
+        "icon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACIAAAAiCAYAAAA6RwvCAAABkklEQVR4nO1YQU7EMAx0o16RekFCEQf2B90HwIEjj+ANPIU38AiOe4AH0B8sB2Qh7WWlfcCilerKcZMmTrsoSIxUtU3cZDxO7LYVvHwfoQAYKAQGCkHt3D1eVb86O1sWLhElrLWj9YWIWc7US0we6teQqueQaKAd2eyhc+xTyZgcEg20XhK+vpiCKkWsIEFYXd6PbLe7zWBH6qQoY5YkIds1yiSHpgmQaG8ehsPXHwqhiojtvfCRkJPLNh+ZKVVUu2blCcfd7fVw/fb+NbKnNXOWFN/2XnMS/F4qNYuIFWEJLc4T1k8XwT56LhYeM1eNdU+CzrmqFFN9DRQCA4XAwF8l0n2+Ojnj4/ngnKmd7GYTwb5IUeGaSkxEwgd6jsYJFb+s0HRCFUKuGuoUv91tRolNkpH2qZhUBEV4+OAnr6XnvI2TiIVFpcgeuiFNc2V8YfCRiCG6RpB54VMmlUTsDS1JEUSsqFhJZULQkFDtGhTKhCSXfalv8apdg0wZmjRmf7YPLGSDL/mlV/3/lhAopvr+AOUn0Ai24oT9AAAAAElFTkSuQmCC",
         "isRiver": false,
         "isCenter": false,
         "locked": true,
         "iconName": null,
-        "marker": "purple",
+        "marker": null,
         "tileGroupId": null
       },
       {
@@ -81461,7 +81461,8 @@ const REALM_KAID = [
         "zoomY": 536,
         "zoomScale": 0.5259498297965693,
         "locked": true,
-        "renamed": true
+        "renamed": true,
+        "realmCenter": false
       },
       {
         "id": "flag_mu9gaen6q8aob",
@@ -81552,7 +81553,8 @@ const REALM_KAID = [
         "zoomY": 897,
         "zoomScale": 1.2587883858597346,
         "locked": true,
-        "renamed": true
+        "renamed": true,
+        "realmCenter": false
       },
       {
         "id": "flag_mu9gca54oo7ms",
@@ -81613,7 +81615,8 @@ const REALM_KAID = [
         "zoomY": 1005,
         "zoomScale": 1.492823581347163,
         "locked": true,
-        "renamed": true
+        "renamed": true,
+        "realmCenter": false
       },
       {
         "id": "flag_mu9ge6dzzvjo1",
@@ -81673,7 +81676,8 @@ const REALM_KAID = [
         "zoomY": 553,
         "zoomScale": 1.2583654768196102,
         "locked": true,
-        "renamed": true
+        "renamed": true,
+        "realmCenter": false
       },
       {
         "id": "flag_mu9gg5og1atd2",
@@ -81730,7 +81734,8 @@ const REALM_KAID = [
         "zoomY": 1114,
         "zoomScale": 0.569601202477163,
         "locked": true,
-        "renamed": true
+        "renamed": true,
+        "realmCenter": false
       },
       {
         "id": "flag_mu9gh2shbq57s",
@@ -81827,7 +81832,8 @@ const REALM_KAID = [
         "zoomY": 879,
         "zoomScale": 0.7389550831753829,
         "locked": true,
-        "renamed": true
+        "renamed": true,
+        "realmCenter": false
       },
       {
         "id": "flag_mua9xmqhwp8ze",
@@ -81906,7 +81912,8 @@ const REALM_KAID = [
         "zoomY": 131,
         "zoomScale": 0.8339531205468146,
         "locked": true,
-        "renamed": true
+        "renamed": true,
+        "realmCenter": false
       },
       {
         "id": "flag_mua9yf7dijad5",
@@ -81958,7 +81965,8 @@ const REALM_KAID = [
         "zoomY": -374,
         "zoomScale": 1.343089840171851,
         "locked": true,
-        "renamed": true
+        "renamed": true,
+        "realmCenter": false
       },
       {
         "id": "flag_mua9z322pq5j6",
@@ -82027,7 +82035,8 @@ const REALM_KAID = [
         "zoomY": -561,
         "zoomScale": 1.5454907396915072,
         "locked": false,
-        "renamed": true
+        "renamed": true,
+        "realmCenter": false
       },
       {
         "id": "flag_mua9zx55dvp46",
@@ -82074,7 +82083,8 @@ const REALM_KAID = [
         "zoomY": -742,
         "zoomScale": 0.6924116877424688,
         "locked": false,
-        "renamed": true
+        "renamed": true,
+        "realmCenter": false
       },
       {
         "id": "flag_muaa0jctq8ddp",
@@ -82121,7 +82131,8 @@ const REALM_KAID = [
         "zoomY": 1719,
         "zoomScale": 0.4947232347690111,
         "locked": true,
-        "renamed": true
+        "renamed": true,
+        "realmCenter": false
       },
       {
         "id": "flag_muaa1l4wowl4v",
@@ -82179,7 +82190,8 @@ const REALM_KAID = [
         "zoomY": 3374,
         "zoomScale": 1.5514509395171268,
         "locked": true,
-        "renamed": true
+        "renamed": true,
+        "realmCenter": false
       },
       {
         "id": "flag_muaa27qkwcrp4",
@@ -82240,7 +82252,8 @@ const REALM_KAID = [
         "zoomY": 3569,
         "zoomScale": 0.9075648205018564,
         "locked": true,
-        "renamed": true
+        "renamed": true,
+        "realmCenter": false
       },
       {
         "id": "flag_muaa3569p9qzf",
@@ -82290,7 +82303,8 @@ const REALM_KAID = [
         "zoomY": 3978,
         "zoomScale": 1.2138503425158733,
         "locked": true,
-        "renamed": true
+        "renamed": true,
+        "realmCenter": false
       },
       {
         "id": "flag_muaa43ahlzjjt",
@@ -82314,7 +82328,8 @@ const REALM_KAID = [
         "zoomY": 4039,
         "zoomScale": 2.1289058273713866,
         "locked": true,
-        "renamed": true
+        "renamed": true,
+        "realmCenter": false
       },
       {
         "id": "flag_muaa5m6d16gi5",
@@ -82374,7 +82389,8 @@ const REALM_KAID = [
         "zoomY": 4455,
         "zoomScale": 1.490818445266815,
         "locked": true,
-        "renamed": true
+        "renamed": true,
+        "realmCenter": false
       },
       {
         "id": "flag_muaa5yylc7l3r",
@@ -82406,7 +82422,8 @@ const REALM_KAID = [
         "zoomY": 4455,
         "zoomScale": 1.490818445266815,
         "locked": false,
-        "renamed": true
+        "renamed": true,
+        "realmCenter": false
       },
       {
         "id": "flag_muaa70jrrbiq4",
@@ -82440,7 +82457,8 @@ const REALM_KAID = [
         "zoomY": 4590,
         "zoomScale": 2.735172498914938,
         "locked": true,
-        "renamed": true
+        "renamed": true,
+        "realmCenter": false
       },
       {
         "id": "flag_muaa7wfitx4u8",
@@ -82590,7 +82608,8 @@ const REALM_KAID = [
         "zoomY": 4239,
         "zoomScale": 0.9680193920316884,
         "locked": true,
-        "renamed": true
+        "renamed": true,
+        "realmCenter": false
       },
       {
         "id": "flag_muaacipx8xlxd",
@@ -82641,7 +82660,8 @@ const REALM_KAID = [
         "zoomY": 3633,
         "zoomScale": 1.5338733855722597,
         "locked": true,
-        "renamed": true
+        "renamed": true,
+        "realmCenter": false
       },
       {
         "id": "flag_muaadqip3mzyk",
@@ -82701,7 +82721,8 @@ const REALM_KAID = [
         "zoomY": 3241,
         "zoomScale": 0.7674599768787265,
         "locked": true,
-        "renamed": true
+        "renamed": true,
+        "realmCenter": false
       },
       {
         "id": "flag_muaaeb4k2s8dd",
@@ -82760,7 +82781,8 @@ const REALM_KAID = [
         "zoomY": 2468,
         "zoomScale": 0.7674599768787265,
         "locked": true,
-        "renamed": true
+        "renamed": true,
+        "realmCenter": false
       },
       {
         "id": "flag_muaaezmwcvd8l",
@@ -82824,7 +82846,8 @@ const REALM_KAID = [
         "zoomY": 3203,
         "zoomScale": 1.4007490321458642,
         "locked": true,
-        "renamed": true
+        "renamed": true,
+        "realmCenter": false
       },
       {
         "id": "flag_muaahql0r5srs",
@@ -82869,7 +82892,8 @@ const REALM_KAID = [
         "zoomY": 2745,
         "zoomScale": 2.555753672678019,
         "locked": true,
-        "renamed": true
+        "renamed": true,
+        "realmCenter": false
       },
       {
         "id": "flag_muaaiwevw9nq7",
@@ -82934,7 +82958,8 @@ const REALM_KAID = [
         "zoomY": 2594,
         "zoomScale": 1.4208319300164807,
         "locked": true,
-        "renamed": true
+        "renamed": true,
+        "realmCenter": false
       },
       {
         "id": "flag_muaaju5mjgje6",
@@ -82983,7 +83008,8 @@ const REALM_KAID = [
         "zoomY": 2365,
         "zoomScale": 2.517090434771928,
         "locked": true,
-        "renamed": true
+        "renamed": true,
+        "realmCenter": false
       },
       {
         "id": "flag_muaaliln14bhp",
@@ -83007,7 +83033,8 @@ const REALM_KAID = [
         "zoomY": 1633,
         "zoomScale": 4.010565143974241,
         "locked": true,
-        "renamed": true
+        "renamed": true,
+        "realmCenter": false
       },
       {
         "id": "flag_muaamnb5vaz7w",
@@ -83067,7 +83094,8 @@ const REALM_KAID = [
         "zoomY": 1849,
         "zoomScale": 0.974189865412057,
         "locked": true,
-        "renamed": true
+        "renamed": true,
+        "realmCenter": false
       },
       {
         "id": "flag_muaansk5padl5",
@@ -83127,7 +83155,8 @@ const REALM_KAID = [
         "zoomY": 2642,
         "zoomScale": 1.7342398234798682,
         "locked": true,
-        "renamed": true
+        "renamed": true,
+        "realmCenter": false
       },
       {
         "id": "flag_muaaoyjv7f67a",
@@ -83193,7 +83222,8 @@ const REALM_KAID = [
         "zoomY": -1092,
         "zoomScale": 0.592459552223152,
         "locked": true,
-        "renamed": true
+        "renamed": true,
+        "realmCenter": false
       },
       {
         "id": "flag_muaapjaip6bys",
@@ -83229,7 +83259,8 @@ const REALM_KAID = [
         "zoomY": -1543,
         "zoomScale": 2.0453310578322155,
         "locked": true,
-        "renamed": true
+        "renamed": true,
+        "realmCenter": false
       },
       {
         "id": "flag_muaaqbw8qhn3o",
@@ -83303,7 +83334,8 @@ const REALM_KAID = [
         "zoomY": -1569,
         "zoomScale": 0.4679061411171343,
         "locked": true,
-        "renamed": true
+        "renamed": true,
+        "realmCenter": false
       },
       {
         "id": "flag_muaar6my7blto",
@@ -83329,7 +83361,8 @@ const REALM_KAID = [
         "zoomY": -1080,
         "zoomScale": 1.2014917453014844,
         "locked": true,
-        "renamed": true
+        "renamed": true,
+        "realmCenter": false
       },
       {
         "id": "flag_muaarsij0c29w",
@@ -83357,7 +83390,8 @@ const REALM_KAID = [
         "zoomY": -1346,
         "zoomScale": 1.9350144707254946,
         "locked": true,
-        "renamed": true
+        "renamed": true,
+        "realmCenter": false
       },
       {
         "id": "flag_muaaw213xnkgc",
@@ -83409,7 +83443,8 @@ const REALM_KAID = [
         "zoomY": 1500,
         "zoomScale": 0.6163481020083987,
         "locked": true,
-        "renamed": true
+        "renamed": true,
+        "realmCenter": false
       },
       {
         "id": "flag_muaco2zu6dk0a",
@@ -83510,7 +83545,8 @@ const REALM_KAID = [
         "zoomY": 1141,
         "zoomScale": 0.7960498728890196,
         "locked": true,
-        "renamed": true
+        "renamed": true,
+        "realmCenter": false
       },
       {
         "id": "flag_muaehxgf88py9",
@@ -83556,7 +83592,8 @@ const REALM_KAID = [
         "zoomY": -2450,
         "zoomScale": 1.4398520324014257,
         "locked": true,
-        "renamed": true
+        "renamed": true,
+        "realmCenter": false
       },
       {
         "id": "flag_muaeiosklhgt3",
@@ -83580,7 +83617,8 @@ const REALM_KAID = [
         "zoomY": -2550,
         "zoomScale": 1.916443055126298,
         "locked": true,
-        "renamed": true
+        "renamed": true,
+        "realmCenter": false
       },
       {
         "id": "flag_muaejnqwl7r5c",
@@ -83624,7 +83662,8 @@ const REALM_KAID = [
         "zoomY": -3007,
         "zoomScale": 2.0761963830292585,
         "locked": true,
-        "renamed": true
+        "renamed": true,
+        "realmCenter": false
       },
       {
         "id": "flag_muaex8x69d952",
@@ -83718,7 +83757,8 @@ const REALM_KAID = [
         "zoomY": -4259,
         "zoomScale": 1.1426871392471216,
         "locked": true,
-        "renamed": true
+        "renamed": true,
+        "realmCenter": false
       },
       {
         "id": "flag_muaey13gbk005",
@@ -83756,7 +83796,8 @@ const REALM_KAID = [
         "zoomY": -3654,
         "zoomScale": 2.0138544619371648,
         "locked": true,
-        "renamed": true
+        "renamed": true,
+        "realmCenter": false
       },
       {
         "id": "flag_muaf0fprwhmvp",
@@ -83816,7 +83857,8 @@ const REALM_KAID = [
         "zoomY": -3589,
         "zoomScale": 1.033078571026436,
         "locked": true,
-        "renamed": true
+        "renamed": true,
+        "realmCenter": false
       },
       {
         "id": "flag_muaf1yx2lfbzb",
@@ -83854,7 +83896,8 @@ const REALM_KAID = [
         "zoomY": -3724,
         "zoomScale": 2.3391731248557304,
         "locked": true,
-        "renamed": true
+        "renamed": true,
+        "realmCenter": false
       },
       {
         "id": "flag_muaf6wcrd4iea",
@@ -83915,7 +83958,8 @@ const REALM_KAID = [
         "zoomY": -1725,
         "zoomScale": 0.8179069375972328,
         "locked": true,
-        "renamed": true
+        "renamed": true,
+        "realmCenter": false
       },
       {
         "id": "flag_muao1xzega8ki",
@@ -83982,7 +84026,8 @@ const REALM_KAID = [
         "zoomY": 282,
         "zoomScale": 1.57438511259076,
         "locked": true,
-        "renamed": true
+        "renamed": true,
+        "realmCenter": false
       },
       {
         "id": "flag_muao558fsx843",
@@ -84044,7 +84089,8 @@ const REALM_KAID = [
         "zoomY": -106,
         "zoomScale": 1.474079276974998,
         "locked": true,
-        "renamed": true
+        "renamed": true,
+        "realmCenter": false
       },
       {
         "id": "flag_muaojzuudjpwo",
@@ -84090,7 +84136,8 @@ const REALM_KAID = [
         "zoomY": -441,
         "zoomScale": 1.980123548399637,
         "locked": true,
-        "renamed": true
+        "renamed": true,
+        "realmCenter": false
       },
       {
         "id": "flag_muaolaocz7doo",
@@ -84155,7 +84202,8 @@ const REALM_KAID = [
         "zoomY": 85,
         "zoomScale": 1.4505384772151244,
         "locked": true,
-        "renamed": true
+        "renamed": true,
+        "realmCenter": false
       },
       {
         "id": "flag_muaorz0uq3y87",
@@ -84198,7 +84246,8 @@ const REALM_KAID = [
         "zoomY": 1375,
         "zoomScale": 1.6502208198115822,
         "locked": true,
-        "renamed": true
+        "renamed": true,
+        "realmCenter": false
       },
       {
         "id": "flag_muc2h4rxs30ld",
@@ -84250,7 +84299,8 @@ const REALM_KAID = [
         "zoomY": 2929,
         "zoomScale": 1.2457818220514139,
         "locked": true,
-        "renamed": true
+        "renamed": true,
+        "realmCenter": false
       },
       {
         "id": "flag_muc2kedog5ox5",
@@ -84280,7 +84330,8 @@ const REALM_KAID = [
         "zoomY": 2979,
         "zoomScale": 1.6251387066079392,
         "locked": true,
-        "renamed": true
+        "renamed": true,
+        "realmCenter": false
       },
       {
         "id": "flag_mud8i5o3ntip9",
@@ -84370,7 +84421,8 @@ const REALM_KAID = [
         "zoomY": 2230,
         "zoomScale": 1.1103646472830138,
         "locked": true,
-        "renamed": true
+        "renamed": true,
+        "realmCenter": false
       },
       {
         "id": "flag_mud8lgxyqe8px",
@@ -84429,7 +84481,8 @@ const REALM_KAID = [
         "zoomY": 2371,
         "zoomScale": 0.5609843208745265,
         "locked": true,
-        "renamed": true
+        "renamed": true,
+        "realmCenter": false
       },
       {
         "id": "flag_mud9eqvzobfno",
@@ -84510,7 +84563,8 @@ const REALM_KAID = [
         "zoomY": 4273,
         "zoomScale": 1.1662801462451557,
         "locked": true,
-        "renamed": true
+        "renamed": true,
+        "realmCenter": false
       },
       {
         "id": "flag_mudaah1kr0yfv",
@@ -84536,7 +84590,8 @@ const REALM_KAID = [
         "zoomY": 5496,
         "zoomScale": 2.8460926722624063,
         "locked": false,
-        "renamed": true
+        "renamed": true,
+        "realmCenter": false
       },
       {
         "id": "flag_mudac6ca7bwpa",
@@ -84582,7 +84637,8 @@ const REALM_KAID = [
         "zoomY": 5506,
         "zoomScale": 3.29093888315977,
         "locked": true,
-        "renamed": true
+        "renamed": true,
+        "realmCenter": false
       },
       {
         "id": "flag_mudadxq0rdmfg",
@@ -84634,7 +84690,8 @@ const REALM_KAID = [
         "zoomY": 4824,
         "zoomScale": 0.7528612581200721,
         "locked": true,
-        "renamed": true
+        "renamed": true,
+        "realmCenter": false
       },
       {
         "id": "flag_mudagchnf4mmn",
@@ -84694,7 +84751,8 @@ const REALM_KAID = [
         "zoomY": 4741,
         "zoomScale": 0.9153975716032985,
         "locked": true,
-        "renamed": true
+        "renamed": true,
+        "realmCenter": false
       },
       {
         "id": "flag_mudami6mwlelg",
@@ -84756,7 +84814,8 @@ const REALM_KAID = [
         "zoomY": 740,
         "zoomScale": 0.9958635542920822,
         "locked": true,
-        "renamed": true
+        "renamed": true,
+        "realmCenter": false
       },
       {
         "id": "flag_mudaulqwioezi",
@@ -84793,7 +84852,8 @@ const REALM_KAID = [
         "zoomY": 868,
         "zoomScale": 0.5670545034451548,
         "locked": true,
-        "renamed": true
+        "renamed": true,
+        "realmCenter": false
       },
       {
         "id": "flag_mudavnlztn69f",
@@ -84830,14 +84890,15 @@ const REALM_KAID = [
         "zoomY": -41,
         "zoomScale": 0.5989800187597917,
         "locked": true,
-        "renamed": true
+        "renamed": true,
+        "realmCenter": false
       }
     ],
     "grid": {
-      "step": 47,
+      "step": 46,
       "phase": {
-        "x": 19,
-        "y": 11
+        "x": 23,
+        "y": 20
       }
     }
   }
