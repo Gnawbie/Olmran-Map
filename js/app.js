@@ -754,6 +754,14 @@
   // doesn't match a useful viewing point).
   function buildFlagRealms() {
     const realms = [];
+    // Flat/"- Legacy" realms first (same order as the top layer-select),
+    // one per MAP_LAYERS entry regardless of whether it has any ZONES yet --
+    // picking one just switches to that flat layer; picking a zone under it
+    // reuses selectZone() (search-to-jump), not the room-graph flow below.
+    MAP_LAYERS.forEach(l => {
+      const zones = ZONES.filter(z => z.layer === l.id);
+      realms.push({ kind: "legacy", layerId: l.id, realmName: l.name + " - Legacy", areas: zones });
+    });
     MAP_LAYERS.forEach(l => {
       const areas = REALM_DATA_BY_LAYER[l.id] || [];
       // Same non-empty-REALM_DATA_BY_LAYER gate used to decide whether this
@@ -781,7 +789,7 @@
       // vanishing until a moderator places flags.
       const areaEntries = flagEntries.length > 0 ? flagEntries : areas.map(a => ({ areaId: a.id, name: a.name }));
       const realmName = areas[0].realm || areas[0].name || l.name;
-      realms.push({ layerId: l.id, realmName, areas: areaEntries });
+      realms.push({ kind: "wip", layerId: l.id, realmName, areas: areaEntries });
     });
     return realms;
   }
@@ -950,14 +958,21 @@
     flagRealmInput.value = r.realmName;
     flagRealmResults.classList.remove("open");
     flagAreaInput.disabled = false;
-    flagAreaInput.placeholder = "Select an area…";
+    flagAreaInput.placeholder = r.kind === "legacy" ? "Select a zone…" : "Select an area…";
     flagAreaInput.value = "";
-    switchLayer(r.layerId + WIP_SUFFIX);
+    switchLayer(r.kind === "legacy" ? r.layerId : r.layerId + WIP_SUFFIX);
   }
 
   function selectFlagArea(a) {
     flagAreaInput.value = a.name;
     flagAreaResults.classList.remove("open");
+    // A Legacy realm's "areas" are actually ZONES entries -- reuse the same
+    // jump/item-browser flow as the top search box instead of the
+    // room-graph-only logic below.
+    if (selectedFlagRealm.kind === "legacy") {
+      selectZone(a);
+      return;
+    }
     renderItemsTree(a.name);
     if (flagNoZoomToggle.checked) return;
     // A fallback (no-flag-yet) area entry has no x/y -- just show the whole
