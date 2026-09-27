@@ -563,3 +563,88 @@ html, body {
    <body> -- hides markers everywhere at once (main view + any open
    Mini-Area windows) without re-rendering, so pan/zoom is never disturbed. */
 body.rgv-hide-difficulty-markers .room-marker-square { display: none; }
+
+/* ---- ported legacy content: text labels, amenity badges, My Icons ---- */
+.map-text-label {
+  color: #1a1a1a;
+  font-weight: 700;
+  white-space: nowrap;
+  text-shadow: 0 0 4px #fff, 0 0 4px #fff, 0 0 4px #fff;
+}
+
+.amenity-badge-row { display: flex; gap: 2px; justify-content: center; }
+.amenity-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 3px;
+  border-radius: 50%;
+  color: #10131a;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+}
+.amenity-badge.badge-wide { border-radius: 9px; }
+
+.legend-subheading {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  margin: 6px 0 2px;
+}
+.legend-row-clickable { cursor: pointer; user-select: none; }
+.legend-row-hidden { opacity: 0.45; text-decoration: line-through; }
+
+.user-icon-pin {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  color: #10131a;
+  font-size: 9px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+.user-icon-popup { display: flex; flex-direction: column; gap: 6px; min-width: 180px; }
+.user-icon-popup-label { font-weight: 600; font-size: 13px; }
+.user-icon-popup textarea {
+  width: 100%;
+  min-height: 50px;
+  resize: vertical;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--panel-border);
+  border-radius: 4px;
+  padding: 6px;
+  font-size: 12px;
+  font-family: inherit;
+}
+.user-icon-popup-btns { display: flex; gap: 6px; }
+.user-icon-popup-btns button {
+  flex: 1;
+  font-size: 11px;
+  padding: 4px 8px;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  color: var(--text);
+  border-radius: 4px;
+  cursor: pointer;
+}
+.user-icon-popup-btns button:hover { border-color: var(--accent); }
+
+#user-icon-palette { display: flex; flex-wrap: wrap; gap: 6px; }
+.user-icon-swatch {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 6px 10px;
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  color: #10131a;
+  cursor: pointer;
+}
+.user-icon-swatch.armed { outline: 2px solid #fff; outline-offset: 1px; }

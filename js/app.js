@@ -69,6 +69,10 @@
     return [[0, 0], [layer.height, layer.width]];
   }
 
+  function latLngToPixel(layer, latlng) {
+    return { x: latlng.lng, y: layer.height - latlng.lat };
+  }
+
   // Registers the color-layer overlay against the base image using a single
   // translation: `layer.colorMapAnchor` is the base image's pixel coordinate
   // that the realm-graph's `isCenter`-flagged room should land on. Shifting
@@ -170,6 +174,289 @@
     boundaryAreaLayerGroup.addTo(map);
   }
 
+  // ---- Text labels: static (read-only) text overlays -- ported from the
+  // legacy project's TEXT_LABELS, minus its dev-only drag/edit UI (this
+  // page has no dev-editing mode; that lives in moderator.html instead).
+  const textLabelLayerGroup = L.layerGroup();
+
+  function textLabelIcon(label) {
+    const fontSize = (label.fontSize || 24) * Math.pow(2, map.getZoom());
+    return L.divIcon({
+      className: "",
+      html: `<div class="map-text-label" style="font-size:${fontSize}px">${escapeHtml(label.text)}</div>`,
+      iconSize: [0, 0],
+      iconAnchor: [0, 0]
+    });
+  }
+
+  function renderTextLabels(layer) {
+    textLabelLayerGroup.clearLayers();
+    (typeof TEXT_LABELS !== "undefined" ? TEXT_LABELS : []).filter(l => l.layer === layer.id).forEach(label => {
+      const marker = L.marker(pixelToLatLng(layer, label.x, label.y), { icon: textLabelIcon(label), interactive: false });
+      marker.__textLabel = label;
+      textLabelLayerGroup.addLayer(marker);
+    });
+    textLabelLayerGroup.addTo(map);
+  }
+
+  // Labels are drawn at a fixed pixel-space font size that scales WITH the
+  // map image (2^zoom) instead of staying a fixed on-screen size like every
+  // other marker -- ported from legacy's rescaleTextLabels.
+  map.on("zoom", () => {
+    textLabelLayerGroup.eachLayer(marker => marker.setIcon(textLabelIcon(marker.__textLabel)));
+  });
+
+  // ---- Line paths: static traced lines -- ported from legacy LINE_PATHS,
+  // read-only (drops the dev-only Remove button).
+  const lineLayerGroup = L.layerGroup();
+
+  function renderLinePaths(layer) {
+    lineLayerGroup.clearLayers();
+    (typeof LINE_PATHS !== "undefined" ? LINE_PATHS : []).filter(p => p.layer === layer.id).forEach(line => {
+      const latlngs = line.points.map(([x, y]) => pixelToLatLng(layer, x, y));
+      L.polyline(latlngs, { color: "#2a2a2a", weight: 2 })
+        .bindPopup(`<h3>Line</h3><p>${line.points.length} points</p>`)
+        .addTo(lineLayerGroup);
+    });
+    lineLayerGroup.addTo(map);
+  }
+
+  // ---- Amenity badges: ported from legacy AMENITY_TYPES/AMENITY_POINTS/
+  // ZONE_AMENITIES. Badges + legend are public in the legacy project; its
+  // drag-and-drop tagging palette was dev-only and isn't ported here (no
+  // dev-editing mode on this page).
+  const amenityLayerGroup = L.layerGroup();
+  let hiddenAmenityTypes = new Set();
+
+  function amenityDef(id) {
+    return (typeof AMENITY_TYPES !== "undefined" ? AMENITY_TYPES : []).find(d => d.id === id);
+  }
+
+  function amenityBadgeHtml(id) {
+    const def = amenityDef(id);
+    if (!def) return "";
+    const wide = def.symbol.length > 1;
+    return `<span class="amenity-badge${wide ? " badge-wide" : ""}" style="background:${def.color}">${escapeHtml(def.symbol)}</span>`;
+  }
+
+  function amenityBadgeIcon(ids) {
+    return L.divIcon({
+      className: "",
+      html: `<div class="amenity-badge-row">${ids.map(amenityBadgeHtml).join("")}</div>`,
+      iconSize: [140, 24],
+      iconAnchor: [70, 34]
+    });
+  }
+
+  function amenityPointIcon(id) {
+    const def = amenityDef(id);
+    const wide = !!(def && def.symbol && def.symbol.length > 1);
+    return L.divIcon({
+      className: "",
+      html: amenityBadgeHtml(id),
+      iconSize: wide ? [30, 22] : [22, 22],
+      iconAnchor: wide ? [15, 26] : [11, 26]
+    });
+  }
+
+  function renderAmenityBadges(layer) {
+    amenityLayerGroup.clearLayers();
+    const zoneAmenities = typeof ZONE_AMENITIES !== "undefined" ? ZONE_AMENITIES : {};
+    Object.entries(zoneAmenities).forEach(([zoneName, allIds]) => {
+      const zone = ZONES.find(z => z.name === zoneName && z.layer === layer.id);
+      const ids = allIds.filter(id => !hiddenAmenityTypes.has(id) && !((amenityDef(id) || {}).hidden));
+      if (!zone || ids.length === 0) return;
+      const marker = L.marker(pixelToLatLng(layer, zone.x, zone.y), { icon: amenityBadgeIcon(ids) });
+      const labels = ids.map(id => (amenityDef(id) || {}).label).filter(Boolean).join(", ");
+      marker.bindPopup(`<h3>${escapeHtml(zoneName)}</h3><p>${escapeHtml(labels)}</p>`);
+      amenityLayerGroup.addLayer(marker);
+    });
+
+    (typeof AMENITY_POINTS !== "undefined" ? AMENITY_POINTS : [])
+      .filter(p => p.layer === layer.id && !hiddenAmenityTypes.has(p.type) && !((amenityDef(p.type) || {}).hidden))
+      .forEach(p => {
+        const def = amenityDef(p.type);
+        L.marker(pixelToLatLng(layer, p.x, p.y), { icon: amenityPointIcon(p.type) })
+          .bindPopup(`<h3>${escapeHtml(def ? def.label : p.type)}</h3>`)
+          .addTo(amenityLayerGroup);
+      });
+
+    amenityLayerGroup.addTo(map);
+  }
+
+  function appendAmenityLegendRows(wrap, heading, types) {
+    if (heading) {
+      const h = document.createElement("div");
+      h.className = "legend-subheading";
+      h.textContent = heading;
+      wrap.appendChild(h);
+    }
+    types.forEach(def => {
+      const row = document.createElement("div");
+      row.className = "legend-row legend-row-clickable" + (hiddenAmenityTypes.has(def.id) ? " legend-row-hidden" : "");
+      row.innerHTML = `<span class="legend-swatch" style="background:${def.color}"></span> <span>${escapeHtml(def.label)}</span>`;
+      row.addEventListener("click", () => {
+        if (hiddenAmenityTypes.has(def.id)) hiddenAmenityTypes.delete(def.id); else hiddenAmenityTypes.add(def.id);
+        row.classList.toggle("legend-row-hidden");
+        renderAmenityBadges(layerById.get(currentLayerId));
+      });
+      wrap.appendChild(row);
+    });
+  }
+
+  function renderAmenityLegend() {
+    const wrap = document.getElementById("legend-amenities-body");
+    wrap.innerHTML = "";
+    const groups = typeof AMENITY_GROUPS !== "undefined" ? AMENITY_GROUPS : [];
+    const types = (typeof AMENITY_TYPES !== "undefined" ? AMENITY_TYPES : []).filter(t => !t.hidden);
+    const groupedIds = new Set();
+    groups.forEach(group => {
+      const members = types.filter(t => t.group === group.id);
+      if (members.length === 0) return;
+      members.forEach(t => groupedIds.add(t.id));
+      appendAmenityLegendRows(wrap, group.label, members);
+    });
+    const ungrouped = types.filter(t => !groupedIds.has(t.id));
+    if (ungrouped.length > 0) appendAmenityLegendRows(wrap, null, ungrouped);
+    if (!wrap.children.length) wrap.innerHTML = '<div class="muted">None yet.</div>';
+  }
+  renderAmenityLegend();
+
+  // ---- My Icons: personal, localStorage-only placeable pins -- ported
+  // from legacy USER_ICON_TYPES/"My Icons" as-is. Legacy has no dev-gating
+  // on this feature at all (every visitor gets it), so nothing needed
+  // stripping, unlike the other ported features above.
+  const USER_ICONS_KEY = "userPlacedIcons";
+  const userIconLayerGroup = L.layerGroup();
+  let userIcons = loadUserIcons();
+  let armedUserIconType = null;
+
+  function loadUserIcons() {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(USER_ICONS_KEY));
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (e) { return []; }
+  }
+  function saveUserIcons(icons) {
+    try { localStorage.setItem(USER_ICONS_KEY, JSON.stringify(icons)); }
+    catch (e) { /* storage unavailable -- icons just won't persist */ }
+  }
+
+  function userIconTypeDef(id) {
+    return (typeof USER_ICON_TYPES !== "undefined" ? USER_ICON_TYPES : []).find(t => t.id === id);
+  }
+
+  function userIconMarkerIcon(typeId) {
+    const def = userIconTypeDef(typeId);
+    return L.divIcon({
+      className: "",
+      html: `<div class="user-icon-pin" style="background:${def ? def.color : "#999"}">${escapeHtml(typeId)}</div>`,
+      iconSize: [24, 24],
+      iconAnchor: [12, 12]
+    });
+  }
+
+  function buildUserIconPopup(icon) {
+    const wrap = document.createElement("div");
+    wrap.className = "user-icon-popup";
+
+    const label = document.createElement("div");
+    label.className = "user-icon-popup-label";
+    label.textContent = (userIconTypeDef(icon.type) || {}).label || icon.type;
+    wrap.appendChild(label);
+
+    const note = document.createElement("textarea");
+    note.value = icon.note || "";
+    note.placeholder = "Note (saved automatically)";
+    note.addEventListener("input", () => {
+      icon.note = note.value;
+      saveUserIcons(userIcons);
+    });
+    wrap.appendChild(note);
+
+    const btnRow = document.createElement("div");
+    btnRow.className = "user-icon-popup-btns";
+
+    const lockBtn = document.createElement("button");
+    lockBtn.type = "button";
+    lockBtn.textContent = icon.locked ? "Unlock" : "Lock";
+    lockBtn.addEventListener("click", () => {
+      icon.locked = !icon.locked;
+      saveUserIcons(userIcons);
+      renderUserIcons(layerById.get(currentLayerId));
+    });
+    btnRow.appendChild(lockBtn);
+
+    const removeBtn = document.createElement("button");
+    removeBtn.type = "button";
+    removeBtn.textContent = "Remove";
+    removeBtn.addEventListener("click", () => {
+      userIcons = userIcons.filter(i => i !== icon);
+      saveUserIcons(userIcons);
+      renderUserIcons(layerById.get(currentLayerId));
+    });
+    btnRow.appendChild(removeBtn);
+
+    wrap.appendChild(btnRow);
+    return wrap;
+  }
+
+  function renderUserIcons(layer) {
+    userIconLayerGroup.clearLayers();
+    userIcons.filter(icon => icon.layer === layer.id).forEach(icon => {
+      const marker = L.marker(pixelToLatLng(layer, icon.x, icon.y), {
+        icon: userIconMarkerIcon(icon.type),
+        draggable: !icon.locked
+      });
+      marker.on("dragend", () => {
+        const p = latLngToPixel(layer, marker.getLatLng());
+        icon.x = Math.round(p.x); icon.y = Math.round(p.y);
+        saveUserIcons(userIcons);
+      });
+      marker.bindPopup(buildUserIconPopup(icon));
+      userIconLayerGroup.addLayer(marker);
+    });
+    userIconLayerGroup.addTo(map);
+  }
+
+  function armUserIconType(id) {
+    armedUserIconType = id;
+    document.querySelectorAll(".user-icon-swatch").forEach(el => {
+      el.classList.toggle("armed", el.dataset.type === id);
+    });
+  }
+
+  function renderUserIconPalette() {
+    const wrap = document.getElementById("user-icon-palette");
+    wrap.innerHTML = "";
+    const types = (typeof USER_ICON_TYPES !== "undefined" ? USER_ICON_TYPES : []).filter(t => t.layer === currentLayerId);
+    if (types.length === 0) {
+      wrap.innerHTML = '<div class="muted">No custom icon types for this map.</div>';
+      return;
+    }
+    types.forEach(def => {
+      const chip = document.createElement("button");
+      chip.type = "button";
+      chip.className = "user-icon-swatch";
+      chip.dataset.type = def.id;
+      chip.style.background = def.color;
+      chip.textContent = def.label;
+      chip.addEventListener("click", () => armUserIconType(armedUserIconType === def.id ? null : def.id));
+      wrap.appendChild(chip);
+    });
+  }
+
+  map.on("click", e => {
+    if (!armedUserIconType) return;
+    const layer = layerById.get(currentLayerId);
+    if (!layer) return;
+    const p = latLngToPixel(layer, e.latlng);
+    userIcons.push({ type: armedUserIconType, layer: currentLayerId, x: Math.round(p.x), y: Math.round(p.y), note: "", locked: false });
+    saveUserIcons(userIcons);
+    renderUserIcons(layer);
+    armUserIconType(null);
+  });
+
   // WIP room-graph layers render a realm's exported root Area directly in
   // #room-graph-root, using the same renderer as the public "View Area Map"
   // popup and the moderator's raw browser -- there's no separate "Realm
@@ -186,6 +473,7 @@
     opts = opts || {};
     const toggle = document.getElementById("color-layer-toggle");
     onLayerSwitchResetFlagPlacement(layerId);
+    armUserIconType(null);
 
     if (isWipLayerId(layerId)) {
       const baseId = baseLayerIdFor(layerId);
@@ -193,6 +481,10 @@
       if (rootAreas.length === 0) return;
       currentLayerId = layerId;
       boundaryAreaLayerGroup.clearLayers();
+      textLabelLayerGroup.clearLayers();
+      lineLayerGroup.clearLayers();
+      amenityLayerGroup.clearLayers();
+      userIconLayerGroup.clearLayers();
       mapEl.hidden = true;
       roomGraphRoot.hidden = false;
       toggle.hidden = true;
@@ -226,6 +518,10 @@
       if (imageLayer) map.removeLayer(imageLayer);
       imageLayer = L.imageOverlay(layer.image, bounds).addTo(map);
       renderBoundaryAreas(layer);
+      renderTextLabels(layer);
+      renderLinePaths(layer);
+      renderAmenityBadges(layer);
+      renderUserIcons(layer);
       if (colorLayer) { map.removeLayer(colorLayer); colorLayer = null; }
       if (layer.colorImage) {
         colorLayer = L.imageOverlay(layer.colorImage, colorImageBoundsFor(layer, bounds), { opacity: 0.6 });
@@ -243,6 +539,7 @@
     renderLegendDifficulty(layerId);
     renderFilterChips();
     renderMarkers();
+    renderUserIconPalette();
   }
 
   document.getElementById("color-layer-toggle").addEventListener("click", function () {
@@ -682,7 +979,8 @@
   const flagNavTabPanels = {
     jump: document.getElementById("flag-nav-tab-jump"),
     items: document.getElementById("flag-nav-tab-items"),
-    myflags: document.getElementById("flag-nav-tab-myflags")
+    myflags: document.getElementById("flag-nav-tab-myflags"),
+    myicons: document.getElementById("flag-nav-tab-myicons")
   };
   flagNavTabs.forEach(tab => {
     tab.addEventListener("click", () => {
