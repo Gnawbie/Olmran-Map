@@ -471,6 +471,23 @@
     return [it.mob, it.slot, it.level ? "lvl " + it.level : null].filter(Boolean).join(" · ");
   }
 
+  // Everything ZONE_ITEMS carries beyond the row's compact name/mob/slot/
+  // level summary -- kept with the pin (it's dragged over as the full
+  // record already) and surfaced in its popup instead of being dropped.
+  function placedItemDetailText(it) {
+    const parts = [];
+    if (it.type) parts.push(it.type);
+    if (it.spell) parts.push("spell: " + it.spell);
+    if (it.damage) parts.push("dmg " + it.damage);
+    if (it.timer) parts.push("timer " + it.timer);
+    if (it.fumble) parts.push("fumble " + it.fumble);
+    if (it.accuracy) parts.push("acc " + it.accuracy);
+    if (it.defense) parts.push("def " + it.defense);
+    if (it.sigil) parts.push("sigil: " + it.sigil + (it.sigilLvl ? " (lvl " + it.sigilLvl + ")" : ""));
+    if (it.weight) parts.push("wt " + it.weight);
+    return parts.join(" · ");
+  }
+
   function placedItemIcon(entry, selected) {
     return L.divIcon({
       className: "",
@@ -492,12 +509,17 @@
         entry.x = Math.round(p.x); entry.y = Math.round(p.y);
         savePlacedItems(placedItems);
       });
+      // Update icons in place rather than calling renderPlacedItems() here --
+      // clearLayers()+recreate would destroy this very marker mid-click,
+      // which cancels the popup bindPopup is about to open on it.
       marker.on("click", () => {
         selectedPlacedItemId = entry.id;
-        renderPlacedItems(layer);
+        placedItemLayerGroup.eachLayer(m => m.setIcon(placedItemIcon(m.__entry, m.__entry.id === selectedPlacedItemId)));
       });
+      marker.__entry = entry;
       const meta = placedItemMetaText(entry.item);
-      marker.bindPopup(`<h3>${escapeHtml(entry.item.item || "?")}</h3>${meta ? `<p>${escapeHtml(meta)}</p>` : ""}<p class="muted" style="font-size:11px;">Select it, then press Delete to remove.</p>`);
+      const detail = placedItemDetailText(entry.item);
+      marker.bindPopup(`<h3>${escapeHtml(entry.item.item || "?")}</h3>${meta ? `<p>${escapeHtml(meta)}</p>` : ""}${detail ? `<p>${escapeHtml(detail)}</p>` : ""}<p class="muted" style="font-size:11px;">Select it, then press Delete to remove.</p>`);
       placedItemLayerGroup.addLayer(marker);
     });
     placedItemLayerGroup.addTo(map);
@@ -552,8 +574,7 @@
     }
     if (selectedPlacedItemId) {
       selectedPlacedItemId = null;
-      const layer = layerById.get(currentLayerId);
-      if (layer) renderPlacedItems(layer);
+      placedItemLayerGroup.eachLayer(m => m.setIcon(placedItemIcon(m.__entry, false)));
     }
   });
 
