@@ -89,6 +89,87 @@
     return [[sw.lat, sw.lng], [ne.lat, ne.lng]];
   }
 
+  // ---- Boundary areas: recolor every white pixel inside a hand-traced
+  // polygon to a Kaid gear tier color -- ported from the legacy
+  // Olmran-Interactive-Map project (js/data/boundary-areas.js there),
+  // same BOUNDARY_AREAS shape ({tier, layer, points}), same canvas-based
+  // recolor-in-place approach, just using this project's own
+  // pixelToLatLng/boundsFor conventions instead of the legacy math.
+  const TIER_PATH_COLORS = { green: "#4ade56", red: "#d92b2b", purple: "#9b59d6" };
+  const boundaryAreaLayerGroup = L.layerGroup();
+  const layerImageCache = {};
+
+  function getLayerImageEl(layer) {
+    if (layerImageCache[layer.id]) return Promise.resolve(layerImageCache[layer.id]);
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => { layerImageCache[layer.id] = img; resolve(img); };
+      img.onerror = reject;
+      img.src = layer.image;
+    });
+  }
+
+  function hexToRgbObj(hex) {
+    const v = parseInt(hex.slice(1), 16);
+    return { r: (v >> 16) & 255, g: (v >> 8) & 255, b: v & 255 };
+  }
+
+  function pointInPolygon(x, y, poly) {
+    let inside = false;
+    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+      const xi = poly[i][0], yi = poly[i][1];
+      const xj = poly[j][0], yj = poly[j][1];
+      const intersect = ((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+      if (intersect) inside = !inside;
+    }
+    return inside;
+  }
+
+  function buildRecoloredAreaOverlayDataUrl(img, area) {
+    const xs = area.points.map(p => p[0]);
+    const ys = area.points.map(p => p[1]);
+    const x1 = Math.min(...xs), x2 = Math.max(...xs);
+    const y1 = Math.min(...ys), y2 = Math.max(...ys);
+    const w = Math.max(1, Math.round(x2 - x1));
+    const h = Math.max(1, Math.round(y2 - y1));
+    const localPoly = area.points.map(([x, y]) => [x - x1, y - y1]);
+
+    const canvas = document.createElement("canvas");
+    canvas.width = w; canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(img, x1, y1, w, h, 0, 0, w, h);
+    const imageData = ctx.getImageData(0, 0, w, h);
+    const data = imageData.data;
+    const rgb = hexToRgbObj(TIER_PATH_COLORS[area.tier]);
+    for (let py = 0; py < h; py++) {
+      for (let px = 0; px < w; px++) {
+        const i = (py * w + px) * 4;
+        const isWhite = data[i] > 235 && data[i + 1] > 235 && data[i + 2] > 235;
+        if (isWhite && pointInPolygon(px, py, localPoly)) {
+          data[i] = rgb.r; data[i + 1] = rgb.g; data[i + 2] = rgb.b; data[i + 3] = 220;
+        } else {
+          data[i + 3] = 0;
+        }
+      }
+    }
+    ctx.putImageData(imageData, 0, 0);
+    return { dataUrl: canvas.toDataURL("image/png"), bounds: [x1, y1, x2, y2] };
+  }
+
+  async function renderBoundaryAreas(layer) {
+    boundaryAreaLayerGroup.clearLayers();
+    const areas = (typeof BOUNDARY_AREAS !== "undefined" ? BOUNDARY_AREAS : []).filter(a => a.layer === layer.id);
+    if (areas.length === 0) return;
+    const img = await getLayerImageEl(layer);
+    areas.forEach(area => {
+      const { dataUrl, bounds } = buildRecoloredAreaOverlayDataUrl(img, area);
+      const sw = pixelToLatLng(layer, bounds[0], bounds[3]);
+      const ne = pixelToLatLng(layer, bounds[2], bounds[1]);
+      L.imageOverlay(dataUrl, [[sw.lat, sw.lng], [ne.lat, ne.lng]]).addTo(boundaryAreaLayerGroup);
+    });
+    boundaryAreaLayerGroup.addTo(map);
+  }
+
   // WIP room-graph layers render a realm's exported root Area directly in
   // #room-graph-root, using the same renderer as the public "View Area Map"
   // popup and the moderator's raw browser -- there's no separate "Realm
@@ -111,6 +192,7 @@
       const rootAreas = REALM_DATA_BY_LAYER[baseId] || [];
       if (rootAreas.length === 0) return;
       currentLayerId = layerId;
+      boundaryAreaLayerGroup.clearLayers();
       mapEl.hidden = true;
       roomGraphRoot.hidden = false;
       toggle.hidden = true;
@@ -143,6 +225,7 @@
       const bounds = boundsFor(layer);
       if (imageLayer) map.removeLayer(imageLayer);
       imageLayer = L.imageOverlay(layer.image, bounds).addTo(map);
+      renderBoundaryAreas(layer);
       if (colorLayer) { map.removeLayer(colorLayer); colorLayer = null; }
       if (layer.colorImage) {
         colorLayer = L.imageOverlay(layer.colorImage, colorImageBoundsFor(layer, bounds), { opacity: 0.6 });
@@ -171,9 +254,12 @@
 
   // ---- layer select ----
   const layerSelect = document.getElementById("layer-select");
+  // "- Legacy" marks these as the flat/overworld layers (now carrying the
+  // ported-from-legacy-project boundary-area coloring) to distinguish them
+  // from the "<Realm> WIP" room-graph options below, which stay unlabeled.
   MAP_LAYERS.forEach(l => {
     const opt = document.createElement("option");
-    opt.value = l.id; opt.textContent = l.name;
+    opt.value = l.id; opt.textContent = l.name + " - Legacy";
     layerSelect.appendChild(opt);
   });
   // One "<Realm> WIP" option per realm that has Test-Builder room-graph
