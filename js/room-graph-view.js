@@ -47,13 +47,34 @@ const RoomGraphView = (function () {
     return m;
   }
 
+  // Mirrors Test Builder's own js/edges.js + css/style.css .edge-line.kind-*
+  // rules exactly (colors, dash patterns, tick/lattice geometry) so a
+  // connection looks the same here as it did while being authored -- a
+  // kind missing from this map used to silently fall back to plain black
+  // "wall" styling instead of reading edge.kind at all.
   const EDGE_STYLE = {
     wall: { stroke: "#1a1a1a", dash: null, width: 3 },
     portal: { stroke: "#e05555", dash: null, width: 3 },
-    climb: { stroke: "#8b909c", dash: "2,5", width: 3, ticks: true },
-    dotted: { stroke: "#1a1a1a", dash: "1,4", width: 3 },
-    dottedRed: { stroke: "#e05555", dash: "1,4", width: 3 }
+    climb: { stroke: "#9aa0ab", dash: null, width: 1.5, ticks: true },
+    dotted: { stroke: "#1a1a1a", dash: "2,3", width: 3 },
+    dottedRed: { stroke: "#e05555", dash: "2,3", width: 3 }
   };
+  // Two-tone "half black, half red" kinds -- direction-sensitive (edge.from
+  // always gets the first-named color), split at the midpoint as two plain
+  // segments rather than one two-color stroke (same reasoning as Test
+  // Builder: SVG can't split a single <line>'s stroke color down its
+  // length).
+  const HALF_COLOR_STYLE = {
+    blackRed: { first: "#1a1a1a", second: "#e05555", dash: null },
+    redBlack: { first: "#e05555", second: "#1a1a1a", dash: null },
+    blackRedDotted: { first: "#1a1a1a", second: "#e05555", dash: "2,3" },
+    redBlackDotted: { first: "#e05555", second: "#1a1a1a", dash: "2,3" }
+  };
+  // Woven/trellis texture: a checkerboard of small rotated squares along the
+  // line instead of any colored stroke (Test Builder draws no visible base
+  // line for this kind either -- the squares ARE the whole visual).
+  const LATTICE_SIZE = 6;
+  const LATTICE_COLOR_A = "#c9a99b", LATTICE_COLOR_B = "#5c3a3a";
 
   function drawEdges(node, g) {
     const rooms = roomsById(node);
@@ -61,25 +82,21 @@ const RoomGraphView = (function () {
       const a = rooms.get(edge.from), b = rooms.get(edge.to);
       if (!a || !b || a.hidden || b.hidden) return;
       const ca = roomCenter(node, a), cb = roomCenter(node, b);
-      const style = EDGE_STYLE[edge.kind] || EDGE_STYLE.wall;
-      // Light halo behind the line for contrast against the dark canvas.
-      el("line", { x1: ca.x, y1: ca.y, x2: cb.x, y2: cb.y, stroke: "rgba(255,255,255,0.25)", "stroke-width": style.width + 3 }, g);
-      const line = el("line", { x1: ca.x, y1: ca.y, x2: cb.x, y2: cb.y, stroke: style.stroke, "stroke-width": style.width }, g);
-      if (style.dash) line.setAttribute("stroke-dasharray", style.dash);
-      if (style.ticks) {
-        const dx = cb.x - ca.x, dy = cb.y - ca.y;
-        const len = Math.hypot(dx, dy) || 1;
-        const ux = dx / len, uy = dy / len, px = -uy, py = ux;
-        const ticks = Math.max(1, Math.floor(len / 14));
-        for (let i = 1; i < ticks; i++) {
-          const t = i / ticks;
-          const cx = ca.x + dx * t, cy = ca.y + dy * t;
-          el("line", {
-            x1: cx - px * 5, y1: cy - py * 5, x2: cx + px * 5, y2: cy + py * 5,
-            stroke: style.stroke, "stroke-width": 2
-          }, g);
-        }
+
+      // Every edge gets this halo first, regardless of kind.
+      el("line", { x1: ca.x, y1: ca.y, x2: cb.x, y2: cb.y, stroke: "rgba(255,255,255,0.55)", "stroke-width": 5 }, g);
+
+      if (edge.kind === "lattice") {
+        drawLatticeEdge(ca, cb, g);
+      } else if (HALF_COLOR_STYLE[edge.kind]) {
+        drawHalfColorEdge(ca, cb, HALF_COLOR_STYLE[edge.kind], g);
+      } else {
+        const style = EDGE_STYLE[edge.kind] || EDGE_STYLE.wall;
+        const line = el("line", { x1: ca.x, y1: ca.y, x2: cb.x, y2: cb.y, stroke: style.stroke, "stroke-width": style.width }, g);
+        if (style.dash) line.setAttribute("stroke-dasharray", style.dash);
+        if (style.ticks) drawClimbTicks(ca, cb, style.stroke, g);
       }
+
       if (edge.label) {
         el("text", {
           x: (ca.x + cb.x) / 2, y: (ca.y + cb.y) / 2 - 4,
@@ -87,6 +104,52 @@ const RoomGraphView = (function () {
         }, g).textContent = edge.label;
       }
     });
+  }
+
+  function drawClimbTicks(ca, cb, stroke, g) {
+    const dx = cb.x - ca.x, dy = cb.y - ca.y;
+    const len = Math.hypot(dx, dy);
+    if (len <= 1) return;
+    const ux = dx / len, uy = dy / len, px = -uy, py = ux;
+    const spacing = 7, tickHalf = 4.5;
+    const steps = Math.floor(len / spacing);
+    for (let i = 1; i < steps; i++) {
+      const cx = ca.x + ux * spacing * i, cy = ca.y + uy * spacing * i;
+      el("line", {
+        x1: cx - px * tickHalf, y1: cy - py * tickHalf, x2: cx + px * tickHalf, y2: cy + py * tickHalf,
+        stroke, "stroke-width": 1.5
+      }, g);
+    }
+  }
+
+  function drawLatticeEdge(ca, cb, g) {
+    const dx = cb.x - ca.x, dy = cb.y - ca.y;
+    const len = Math.hypot(dx, dy);
+    if (len <= 1) return;
+    const ux = dx / len, uy = dy / len, px = -uy, py = ux;
+    const angleDeg = Math.atan2(uy, ux) * 180 / Math.PI;
+    const steps = Math.ceil(len / LATTICE_SIZE);
+    for (let i = 0; i < steps; i++) {
+      [-1, 1].forEach((side, col) => {
+        const along = i * LATTICE_SIZE + LATTICE_SIZE / 2;
+        if (along > len) return;
+        const across = side * (LATTICE_SIZE / 2 + 0.5);
+        const cx = ca.x + ux * along + px * across;
+        const cy = ca.y + uy * along + py * across;
+        const fill = (i + col) % 2 === 0 ? LATTICE_COLOR_A : LATTICE_COLOR_B;
+        el("rect", {
+          x: cx - LATTICE_SIZE / 2, y: cy - LATTICE_SIZE / 2, width: LATTICE_SIZE, height: LATTICE_SIZE,
+          fill, stroke: "#3a241f", "stroke-width": 0.5, transform: `rotate(${angleDeg} ${cx} ${cy})`
+        }, g);
+      });
+    }
+  }
+
+  function drawHalfColorEdge(ca, cb, style, g) {
+    const mx = (ca.x + cb.x) / 2, my = (ca.y + cb.y) / 2;
+    const first = el("line", { x1: ca.x, y1: ca.y, x2: mx, y2: my, stroke: style.first, "stroke-width": 3 }, g);
+    const second = el("line", { x1: mx, y1: my, x2: cb.x, y2: cb.y, stroke: style.second, "stroke-width": 3 }, g);
+    if (style.dash) { first.setAttribute("stroke-dasharray", style.dash); second.setAttribute("stroke-dasharray", style.dash); }
   }
 
   function drawConnector(node, room, roomG) {
