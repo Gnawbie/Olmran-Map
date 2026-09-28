@@ -629,6 +629,16 @@
       }
       currentExplorer = explorer;
       currentWipAreaId = targetArea.id;
+      // Keeps the Options panel's Items tab in sync with whatever area is
+      // actually being shown, regardless of how we got here (top-dropdown
+      // direct pick, the realm's default rootAreas[0], or the Jump tab) --
+      // previously this only ever ran from selectFlagArea's own call below,
+      // so picking a "<Realm> WIP" layer straight from the dropdown left it
+      // stuck on stale/placeholder content. selectFlagArea re-renders this
+      // again right after switchLayer() when a specific flag's own name
+      // differs from its area's name, so that stays the more precise source
+      // of truth when applicable.
+      renderItemsTree(targetArea.name);
     } else {
       currentExplorer = null;
       currentWipAreaId = null;
@@ -1139,8 +1149,10 @@
       selectZone(a);
       return;
     }
-    renderItemsTree(a.name);
-    if (flagNoZoomToggle.checked) return;
+    if (flagNoZoomToggle.checked) {
+      renderItemsTree(a.name);
+      return;
+    }
     // A fallback (no-flag-yet) area entry has no x/y -- just show the whole
     // area (switchLayer's own fit()) instead of a specific zoom point.
     // highlightRoomIds is always passed (even as the flag's own undefined/
@@ -1149,6 +1161,10 @@
     const opts = { areaId: a.areaId, highlightRoomIds: a.roomIds || null };
     if (typeof a.x === "number" && typeof a.y === "number") opts.focus = { x: a.x, y: a.y, scale: a.scale || 1.2 };
     switchLayer(selectedFlagRealm.layerId + WIP_SUFFIX, opts);
+    // switchLayer() already re-rendered the Items tab from the area's own
+    // name -- re-render with this specific flag's name (may differ from the
+    // area's name for a multi-flag area) so the more precise one wins.
+    renderItemsTree(a.name);
   }
 
   // ---- Items tab: a tree of {item -> monsters that drop it} for whichever
