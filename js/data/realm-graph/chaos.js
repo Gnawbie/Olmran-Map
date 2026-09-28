@@ -3,7 +3,7 @@
 // moderator panel accepts an updated export — never hand-edited.
 const REALM_CHAOS = [
   {
-    "id": "area_mtzm5pwngtjso",
+    "id": "area_muj4mbhhzlqqp",
     "name": "Chaos area",
     "realm": "Chaos",
     "offset": {
@@ -18,6 +18,7 @@ const REALM_CHAOS = [
     "arrows": [],
     "miniAreas": [],
     "flags": [],
+    "itemListArea": null,
     "grid": {
       "step": 50,
       "phase": {
